@@ -144,6 +144,23 @@ mp3_link="https://anchor.fm/s/7d083a4/podcast/play/64348045/https%3A%2F%2Fd3ctxl
 tstbtc transcribe $mp3_link --loc "stephan-livera-podcast" --title 'SLP455 Anant Tapadia - Single Sig or Multi Sig?' --date '2023-02-01' --tags 'multisig' --speakers 'Anant Tapadia' --speakers 'Stephan Livera' --category 'podcast'
 ```
 
+## Running as a Server
+
+In addition to running as a CLI application, you can also run tstbtc as a server.
+This allows you to interact with the transcription functionalities via HTTP requests.
+
+This is WIP
+
+### Starting the Server
+
+To start the server, navigate to the application directory and run:
+
+```sh
+fastapi run server.py
+```
+
+The server will be accessible at http://localhost:8000.
+
 ## Testing
 
 To run the unit tests

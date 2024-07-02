@@ -2,6 +2,7 @@ import librosa
 import soundfile as sf
 import os
 import ffmpeg
+import yt_dlp
 
 from app import (
     logging,
@@ -86,3 +87,23 @@ class MediaProcessor:
         except ffmpeg.Error as e:
             logger.error(f"Error converting {input_path} to mp3: {e}")
             raise Exception(f"Error converting {input_path} to mp3: {e}")
+
+    def get_youtube_video_url(self, youtube_url):
+        """
+        Extracts and returns the direct URL of a YouTube video, allowing it
+        to be played directly without going through the YouTube platform.
+        """
+        ydl_opts = {
+            'format': 'best',
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(youtube_url, download=False)
+                video_url = info_dict.get("url", None)
+                return video_url
+        except Exception as e:
+            logger.error(f"Error extracting video URL: {e}")
+            return None

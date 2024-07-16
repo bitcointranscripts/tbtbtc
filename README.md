@@ -34,6 +34,8 @@ This transcription tool operates through a structured four-stage process:
 
 ## Prerequisites
 
+- This tool requires a running server component. Make sure you have the server running before using the CLI commands. You need to set the `TRANSCRIPTION_SERVER_URL` in your `.env` file. This should point to the URL where your transcription server is running (e.g., `http://localhost:8000`).
+
 - To use [deepgram](https://deepgram.com/) as a transcription service,
   you must have a valid `DEEPGRAM_API_KEY` in the `.env` file.
 
@@ -77,23 +79,38 @@ To use it, copy it to `config.ini` and modify it according to your needs:
 cp config.ini.example config.ini
 ```
 
-## Install/Uninstall
+## Installation and Setup
 
 Navigate to the application directory and run the below commands:
 
-`python3 -m venv venv` creates a virtual environment
+1. `python3 -m venv venv` creates a virtual environment
+2. `source venv/bin/activate` activates the virtual environment
+3. `pip3 install .` to install the application
+4. Create a `.env` file in the project root and add the required variables based on [Prerequisites](#prerequisites).
+5. `tstbtc --version` view the application version
+6. `tstbtc --help` view the application help
 
-`source venv/bin/activate` activates the virtual environment
-
-`pip3 install .` to install the application
-
-`tstbtc --version` view the application version
-
-`tstbtc --help` view the application help
-
-`pip3 uninstall tstbtc` to uninstall the application
+To uninstall: `pip3 uninstall tstbtc`
 
 ## Usage
+
+The application has a server component that needs to be running for the CLI to function.
+This allows the heavy lifting of transcription to be done on a separate machine if desired.
+
+### Starting the Server
+
+To start the server, navigate to the application directory and run:
+
+```sh
+fastapi run server.py
+```
+
+The server will be accessible at `http://localhost:8000` by default.
+Ensure this matches the `TRANSCRIPTION_SERVER_URL` in your `.env` file.
+
+### Using the CLI
+
+Once the server is running, you can use the CLI commands.
 
 `tstbtc transcribe {source_file/url}` transcribe the given source
 
@@ -143,23 +160,6 @@ You can also transcribe a remote audio/mp3 link, such as the following from Step
 mp3_link="https://anchor.fm/s/7d083a4/podcast/play/64348045/https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%2F2023-1-1%2Ff7fafb12-9441-7d85-d557-e9e5d18ab788.mp3"
 tstbtc transcribe $mp3_link --loc "stephan-livera-podcast" --title 'SLP455 Anant Tapadia - Single Sig or Multi Sig?' --date '2023-02-01' --tags 'multisig' --speakers 'Anant Tapadia' --speakers 'Stephan Livera' --category 'podcast'
 ```
-
-## Running as a Server
-
-In addition to running as a CLI application, you can also run tstbtc as a server.
-This allows you to interact with the transcription functionalities via HTTP requests.
-
-This is WIP
-
-### Starting the Server
-
-To start the server, navigate to the application directory and run:
-
-```sh
-fastapi run server.py
-```
-
-The server will be accessible at http://localhost:8000.
 
 ## Testing
 

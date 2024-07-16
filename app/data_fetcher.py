@@ -56,7 +56,7 @@ class DataFetcher:
         data = self.fetch_json("status")
         return {value: True for value in data.get("existing", {}).get("media", [])}
 
-    def get_transcription_queue(self) -> List[str]:
+    def get_transcription_backlog(self) -> List[str]:
         """Returns a list of items that need transcription"""
         data = self.fetch_json("status")
         return data.get("needs", {}).get("transcript", [])

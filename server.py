@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import config
 from app.logging import configure_logger, get_logger
+from routes.curator import router as curator_router
 from routes.media import router as media_router
 
 logger = get_logger()
@@ -25,4 +26,9 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+app.include_router(curator_router, prefix="/curator")
 app.include_router(media_router, prefix="/media")

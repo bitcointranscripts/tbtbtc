@@ -461,6 +461,7 @@ def postprocess(
         traceback.print_exc()
 
 cli.add_command(commands.queue)
+cli.add_command(commands.curator)
 
 if __name__ == '__main__':
     cli()

@@ -8,6 +8,7 @@ from dotenv import dotenv_values
 import yaml
 import yt_dlp
 
+from app.exceptions import DuplicateSourceError
 from app.transcript import (
     PostprocessOutput,
     Transcript,
@@ -251,6 +252,12 @@ class Transcription:
         source.additional_resources = additional_resources
         self.logger.debug(f"Detected source: {source}")
 
+        # Check if source is already in the transcription queue
+        for transcript in self.transcripts:
+            if transcript.source.loc == loc and transcript.source.title == title:
+                self.logger.warning(f"Source already exists in queue: {title}")
+                raise DuplicateSourceError(loc, title)
+
         if source.type == "playlist":
             # add a transcript for each source/video in the playlist
             for video in source.videos:
@@ -317,6 +324,34 @@ class Transcription:
                 nocheck=nocheck,
                 cutoff_date=metadata["cutoff_date"]
             )
+
+    def remove_transcription_source_JSON(self, json_file):
+        # Validate and parse the JSON file
+        utils.check_if_valid_file_path(json_file)
+        sources = utils.check_if_valid_json(json_file)
+
+        # Check if JSON contains multiple sources
+        if not isinstance(sources, list):
+            sources = [sources]
+
+        self.logger.info(f"Removing transcripts from {json_file}")
+        removed_sources = []
+
+        for source in sources:
+            metadata = utils.configure_metadata_given_from_JSON(source)
+            loc = metadata["loc"]
+            title = metadata["title"]
+
+            for transcript in self.transcripts:
+                if transcript.source.loc == loc and transcript.source.title == title:
+                    self.transcripts.remove(transcript)
+                    removed_sources.append(transcript)
+                    self.logger.info(f"Removed source from queue: {title}")
+                    break
+            else:
+                self.logger.warning(f"Source not found in queue: {title}")
+
+        return removed_sources
 
     def start(self, test_transcript=None):
         self.result = []
@@ -469,3 +504,15 @@ class Transcription:
     def clean_up(self):
         self.logger.info("Cleaning up...")
         application.clean_up(self.tmp_dir)
+
+    def __del__(self):
+        if self.nocleanup:
+            self.logger.info("Not cleaning up temp files...")
+        else:
+            self.clean_up()
+
+    def __str__(self):
+        excluded_fields = ['logger', "existing_media"]
+        fields = {key: value for key, value in self.__dict__.items()
+                  if key not in excluded_fields}
+        return f"Transcription:{str(fields)}"

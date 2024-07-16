@@ -182,6 +182,7 @@ async def get_queue():
     queue = [
         {
             **transcript.source.to_json(),
+            "status": transcript.status
         }
         for transcript in transcription_instance.transcripts
     ]

@@ -53,6 +53,7 @@ class Transcription:
         batch_preprocessing_output=False,
         needs_review=False,
     ):
+        self.status = "idle"  # Can be "idle", "in_progress", or "completed"
         self.test_mode = test_mode
         self.logger = get_logger()
         self.tmp_dir = working_dir if working_dir is not None else tempfile.mkdtemp()
@@ -354,9 +355,11 @@ class Transcription:
         return removed_sources
 
     def start(self, test_transcript=None):
+        self.status = "in_progress"
         self.result = []
         try:
             for transcript in self.transcripts:
+                transcript.status = "in_progress"
                 output_dir = f"{self.model_output_dir}/{transcript.source.loc}"
                 self.logger.info(
                     f"Processing source: {transcript.source.source_file}")
@@ -367,13 +370,16 @@ class Transcription:
                     transcript.result = test_transcript if test_transcript is not None else "test-mode"
                 else:
                     transcript = self.service.transcribe(transcript)
+                transcript.status = "completed"
                 postprocessed_transcript = self.postprocess(transcript)
                 self.result.append(postprocessed_transcript)
 
+            self.status = "completed"
             if self.bitcointranscripts_dir:
                 self.push_to_github(self.result)
             return self.result
         except Exception as e:
+            self.status = "failed"
             raise Exception(f"Error with the transcription: {e}") from e
 
     def push_to_github(self, outputs: list[PostprocessOutput]):

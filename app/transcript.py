@@ -84,7 +84,7 @@ class PostprocessOutput(TypedDict):
 
 
 class Source:
-    def __init__(self, source_file, loc, local, title, date, summary, episode, tags, category, speakers, preprocess, link=None):
+    def __init__(self, source_file, loc, local, title, date, tags, category, speakers, preprocess, summary=None, episode=None, link=None):
         # initialize source with arguments
         self.save_source(source_file=source_file, loc=loc, local=local, title=title, summary=summary,
                          episode=episode, tags=tags, category=category, speakers=speakers, preprocess=preprocess, link=link)
@@ -386,8 +386,8 @@ class Playlist(Source):
         self.videos: Video = []
         for entry in entries:
             if entry["title"] != '[Private video]':
-                source = Video(source=Source(entry["url"], self.loc, self.local, entry["title"], self.event_date,
-                                             self.tags, self.category, self.speakers, self.preprocess))
+                source = Video(source=Source(source_file=entry["url"], loc=self.loc, local=self.local, title=entry["title"], date=self.event_date,
+                                             tags=self.tags, category=self.category, speakers=self.speakers, preprocess=self.preprocess))
                 self.videos.append(source)
 
 

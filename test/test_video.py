@@ -26,7 +26,6 @@ def test_video_with_title():
     category = None
     date = None
     transcription = Transcription(
-        username=username,
         test_mode=True,
     )
     transcription.add_transcription_source(
@@ -59,7 +58,6 @@ def test_video_with_all_options():
     date = "2020-01-31"
 
     transcription = Transcription(
-        username=username,
         test_mode=True,
     )
     transcription.add_transcription_source(
@@ -95,7 +93,6 @@ def test_video_with_chapters():
     date = "2020-01-31"
 
     transcription = Transcription(
-        username=username,
         test_mode=True,
     )
     transcription.add_transcription_source(

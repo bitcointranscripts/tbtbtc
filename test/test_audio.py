@@ -21,7 +21,6 @@ def test_audio_with_title():
     title = "title"
     username = "username"
     transcription = Transcription(
-        username=username,
         test_mode=True,
     )
     transcription.add_transcription_source(source_file=source, title=title)
@@ -50,7 +49,6 @@ def test_audio_with_all_data():
     category = "category"
     date = "2020-01-31"
     transcription = Transcription(
-        username=username,
         test_mode=True,
     )
     transcription.add_transcription_source(

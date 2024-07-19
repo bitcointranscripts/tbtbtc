@@ -59,7 +59,7 @@ class Transcription:
         self.logger = get_logger()
         self.tmp_dir = working_dir if working_dir is not None else tempfile.mkdtemp()
 
-        self.transcript_by = "username" if test_mode else self.__get_username()
+        self.transcript_by = self.__configure_username(username)
         # during testing we need to create the markdown for validation purposes
         self.markdown = markdown or test_mode
         self.metadata_writer = DataWriter(
@@ -117,21 +117,13 @@ class Transcription:
         else:
             return ""
 
-    def __get_username(self):
-        try:
-            if os.path.isfile(".username"):
-                with open(".username", "r") as f:
-                    username = f.read()
-                    f.close()
-            else:
-                print("What is your github username?")
-                username = input()
-                with open(".username", "w") as f:
-                    f.write(username)
-                    f.close()
+    def __configure_username(self, username: str | None):
+        if self.test_mode:
+            return "username"
+        if username:
             return username
-        except Exception as e:
-            raise Exception("Error getting username")
+        else:
+            raise Exception("You need to provide a username for transcription attribution")
 
     def _initialize_source(self, source: Source, youtube_metadata, chapters):
         """Initialize transcription source based on metadata

@@ -42,6 +42,7 @@ async def preprocess(
         logger.info(f"Preprocessing sources...")
         transcription = Transcription(
             queue=False,
+            username="not-needed",
             batch_preprocessing_output=True
         )
 
@@ -83,6 +84,7 @@ async def add_to_queue(
     diarize: bool = Form(False),
     upload: bool = Form(False),
     model_output_dir: str = Form("local_models/"),
+    username: str = Form(None),
     nocleanup: bool = Form(False),
     noqueue: bool = Form(True),
     markdown: bool = Form(False),
@@ -102,6 +104,7 @@ async def add_to_queue(
             diarize=diarize,
             upload=upload,
             model_output_dir=model_output_dir,
+            username=username,
             nocleanup=nocleanup,
             queue=not noqueue,
             markdown=markdown,

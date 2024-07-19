@@ -1,10 +1,10 @@
 import click
 import requests
-from dotenv import dotenv_values
+
+from app.config import settings
 
 def get_transcription_url():
-    config = dotenv_values(".env")
-    url = config.get("TRANSCRIPTION_SERVER_URL")
+    url = settings.TRANSCRIPTION_SERVER_URL
     if not url:
         raise click.ClickException("TRANSCRIPTION_SERVER_URL is not set in the environment or .env file. "
                                    "Please set it and try again.")

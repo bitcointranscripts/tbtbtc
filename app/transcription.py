@@ -4,10 +4,10 @@ import random
 import subprocess
 import tempfile
 
-from dotenv import dotenv_values
 import yaml
 import yt_dlp
 
+from app.config import settings
 from app.exceptions import DuplicateSourceError
 from app.transcript import (
     PostprocessOutput,
@@ -88,8 +88,7 @@ class Transcription:
         return subdir_path
 
     def __configure_tstbtc_metadata_dir(self):
-        config = dotenv_values(".env")
-        metadata_dir = config.get("TSTBTC_METADATA_DIR")
+        metadata_dir = settings.TSTBTC_METADATA_DIR
         if not metadata_dir:
             alternative_metadata_dir = "/metadata"
             self.logger.warning(
@@ -100,8 +99,7 @@ class Transcription:
     def __configure_target_repo(self, github: GitHubMode):
         if github == "none":
             return None
-        config = dotenv_values(".env")
-        git_repo_dir = config.get("BITCOINTRANSCRIPTS_DIR")
+        git_repo_dir = settings.BITCOINTRANSCRIPTS_DIR
         if not git_repo_dir:
             raise Exception(
                 "To push to GitHub you need to define a 'BITCOINTRANSCRIPTS_DIR' in your .env file")

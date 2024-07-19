@@ -1,9 +1,9 @@
 from typing import Literal
 
-from dotenv import dotenv_values
 import requests
 
 from app import __version__
+from app.config import settings
 from app.logging import get_logger
 from app.transcript import Transcript
 from app.utils import write_to_json
@@ -18,16 +18,9 @@ class Queuer:
             self._config_endpoint()
 
     def _config_endpoint(self):
-        config = dotenv_values(".env")
-        if "QUEUE_ENDPOINT" not in config:
-            raise Exception(
-                "To push to a queue you need to define a 'QUEUE_ENDPOINT' in your .env file")
-        if "BEARER_TOKEN" not in config:
-            raise Exception(
-                "To push to a queue you need to define a 'BEARER_TOKEN' in your .env file")
-        self.url = config["QUEUE_ENDPOINT"] + "/api"
+        self.url = settings.QUEUE_ENDPOINT + "/api"
         self.headers = {
-            'Authorization': f'Bearer {config["BEARER_TOKEN"]}',
+            'Authorization': f'Bearer {settings.BEARER_TOKEN}',
             'Content-Type': 'application/json'
         }
 

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from app.config import get_btc_transcripts_url
+from app.config import settings
 from app.data_fetcher import DataFetcher
 from app.logging import get_logger
 from app.types import TranscriptionCoverage
@@ -12,8 +12,7 @@ logger = get_logger()
 router = APIRouter(tags=["Curator"])
 
 try:
-    BTC_TRANSCRIPTS_URL = get_btc_transcripts_url()
-    data_fetcher = DataFetcher(base_url=BTC_TRANSCRIPTS_URL)
+    data_fetcher = DataFetcher(base_url=settings.BTC_TRANSCRIPTS_URL)
 except HTTPException as e:
     # Log the error and re-raise it
     logger.error(f"Failed to initialize server: {e.detail}")

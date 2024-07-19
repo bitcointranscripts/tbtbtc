@@ -4,9 +4,9 @@ import logging
 import shutil
 
 import boto3
-from dotenv import dotenv_values
 
 from app import __app_name__, __version__
+from app.config import settings
 from app.logging import get_logger
 
 logger = get_logger()
@@ -23,8 +23,7 @@ def clean_up(tmp_dir):
 def upload_file_to_s3(file_path):
     logger = logging.getLogger(__app_name__)
     s3 = boto3.client("s3")
-    config = dotenv_values(".env")
-    bucket = config["S3_BUCKET"]
+    bucket = settings.S3_BUCKET
     base_filename = file_path.split("/")[-1]
     dir = "model outputs/" + base_filename
     try:

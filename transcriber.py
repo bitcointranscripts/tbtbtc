@@ -12,7 +12,7 @@ from app import (
     utils
 )
 from app.commands.cli_utils import ServerCheckGroup, get_transcription_url
-from app.config import config
+from app.config import settings
 from app.data_writer import DataWriter
 from app.logging import configure_logger, get_logger
 from app.transcription import Transcription
@@ -61,7 +61,7 @@ whisper = click.option(
             "large-v2",
         ]
     ),
-    default=config.get('model', 'tiny.en'),
+    default=settings.config.get('model', 'tiny.en'),
     show_default=True,
     help="Select which whisper model to use for the transcription",
 )
@@ -69,7 +69,7 @@ deepgram = click.option(
     "-D",
     "--deepgram",
     is_flag=True,
-    default=config.getboolean('deepgram', False),
+    default=settings.config.getboolean('deepgram', False),
     show_default=True,
     help="Use deepgram for transcription",
 )
@@ -77,7 +77,7 @@ diarize = click.option(
     "-M",
     "--diarize",
     is_flag=True,
-    default=config.getboolean('diarize', False),
+    default=settings.config.getboolean('diarize', False),
     show_default=True,
     help="Supply this flag if you have multiple speakers AKA "
     "want to diarize the content",
@@ -86,14 +86,14 @@ summarize = click.option(
     "-S",
     "--summarize",
     is_flag=True,
-    default=config.getboolean('summarize', False),
+    default=settings.config.getboolean('summarize', False),
     show_default=True,
     help="Summarize the transcript [only available with deepgram]",
 )
 cutoff_date = click.option(
     "--cutoff-date",
     type=str,
-    default=config.get('cutoff_date', None),
+    default=settings.config.get('cutoff_date', None),
     help=("Specify a cutoff date (in YYYY-MM-DD format) to process only sources "
           "published after this date. Sources with a publication date on or before "
           "the cutoff will be excluded from processing. This option is useful for "
@@ -103,7 +103,7 @@ cutoff_date = click.option(
 github = click.option(
     "--github",
     type=click.Choice(["remote", "local", "none"]),
-    default=config.get('github', 'none'),
+    default=settings.config.get('github', 'none'),
     help=("Specify the GitHub operation mode."
           "'remote': Create a new branch, push changes to it, and push it to the origin bitcointranscripts repo. "
           "'local': Commit changes to the current local branch without pushing to the remote repo."
@@ -114,46 +114,46 @@ upload_to_s3 = click.option(
     "-u",
     "--upload",
     is_flag=True,
-    default=config.getboolean('upload_to_s3', False),
+    default=settings.config.getboolean('upload_to_s3', False),
     help="Upload processed model files to AWS S3",
 )
 save_to_markdown = click.option(
     "--markdown",
     is_flag=True,
-    default=config.getboolean('save_to_markdown', False),
+    default=settings.config.getboolean('save_to_markdown', False),
     help="Save the resulting transcript to a markdown format supported by bitcointranscripts",
 )
 noqueue = click.option(
     "--noqueue",
     is_flag=True,
-    default=config.getboolean('noqueue', False),
+    default=settings.config.getboolean('noqueue', False),
     help="Do not push the resulting transcript to the Queuer backend",
 )
 needs_review = click.option(
     "--needs-review",
     is_flag=True,
-    default=config.getboolean('needs_review', False),
+    default=settings.config.getboolean('needs_review', False),
     help="Add 'needs review' flag to the resulting transcript",
 )
 model_output_dir = click.option(
     "-o",
     "--model_output_dir",
     type=str,
-    default=config.get('model_output_dir', 'local_models/'),
+    default=settings.config.get('model_output_dir', 'local_models/'),
     show_default=True,
     help="Set the directory for saving model outputs",
 )
 nocleanup = click.option(
     "--nocleanup",
     is_flag=True,
-    default=config.getboolean('nocleanup', False),
+    default=settings.config.getboolean('nocleanup', False),
     help="Do not remove temp files on exit",
 )
 verbose_logging = click.option(
     "-V",
     "--verbose",
     is_flag=True,
-    default=config.getboolean('verbose_logging', False),
+    default=settings.config.getboolean('verbose_logging', False),
     help="Supply this flag to enable verbose logging",
 )
 

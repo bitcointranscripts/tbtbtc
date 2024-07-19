@@ -4,14 +4,13 @@ import os
 import re
 
 import deepgram
-from dotenv import dotenv_values
 import librosa
 
 from app import (
     application,
     utils
 )
-from app.config import config as config_profile
+from app.config import settings
 from app.data_writer import DataWriter
 from app.logging import get_logger
 from app.media_processor import MediaProcessor
@@ -34,18 +33,18 @@ class Deepgram:
         self.diarize = diarize
         self.upload = upload
         self.data_writer = data_writer
-        self.one_sentence_per_line = config_profile.getboolean('one_sentence_per_line', True)
+        self.one_sentence_per_line = settings.config.getboolean('one_sentence_per_line', True)
         self.dev_mode = False  # Extra capabilities during development mode
         self.max_audio_length = 3600.0  # 60 minutes in seconds
         self.processor = MediaProcessor(chunk_length=1200.0)
+        self.api_key = settings.DEEPGRAM_API_KEY
 
     def audio_to_text(self, audio_file, chunk=None):
-        language = config_profile.get('language','en')
+        language = settings.config.get('language','en')
         logger.info(
             f"Transcribing audio {f'(chunk {chunk}) ' if chunk else ''}to text using deepgram[{language}]...")
         try:
-            config = dotenv_values(".env")
-            dg_client = deepgram.Deepgram(config["DEEPGRAM_API_KEY"])
+            dg_client = deepgram.Deepgram(self.api_key)
 
             with open(audio_file, "rb") as audio:
                 mimeType = mimetypes.MimeTypes().guess_type(audio_file)[0]

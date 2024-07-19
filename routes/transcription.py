@@ -92,39 +92,46 @@ async def add_to_queue(
     source: Optional[str] = Form(None),
     source_file: Optional[UploadFile] = File(None)
 ):
-    transcription = get_transcription_instance(
-        model=model,
-        github=github,
-        summarize=summarize,
-        deepgram=deepgram,
-        diarize=diarize,
-        upload=upload,
-        model_output_dir=model_output_dir,
-        nocleanup=nocleanup,
-        queue=not noqueue,
-        markdown=markdown,
-        needs_review=needs_review
-    )
-    if source_file:
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            shutil.copyfileobj(source_file.file, tmp)
-            temp_file_path = tmp.name
-        transcription.add_transcription_source_JSON(temp_file_path , nocheck=nocheck)
-        os.remove(temp_file_path)
-    else:
-        transcription.add_transcription_source(
-            source_file=source,
-            loc=loc,
-            title=title,
-            date=date,
-            tags=tags,
-            category=category,
-            speakers=speakers,
-            nocheck=nocheck,
-            cutoff_date=cutoff_date
+    temp_file_path = None
+    try:
+        transcription = get_transcription_instance(
+            model=model,
+            github=github,
+            summarize=summarize,
+            deepgram=deepgram,
+            diarize=diarize,
+            upload=upload,
+            model_output_dir=model_output_dir,
+            nocleanup=nocleanup,
+            queue=not noqueue,
+            markdown=markdown,
+            needs_review=needs_review
         )
+        if source_file:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                shutil.copyfileobj(source_file.file, tmp)
+                temp_file_path = tmp.name
+            transcription.add_transcription_source_JSON(temp_file_path , nocheck=nocheck)
+        else:
+            transcription.add_transcription_source(
+                source_file=source,
+                loc=loc,
+                title=title,
+                date=date,
+                tags=tags,
+                category=category,
+                speakers=speakers,
+                nocheck=nocheck,
+                cutoff_date=cutoff_date
+            )
 
-    return {"status": "queued", "message": "Transcription source has been added to the queue."}
+        return {"status": "queued", "message": "Transcription source has been added to the queue."}
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 @router.post("/remove_from_queue/")
 async def remove_from_queue(
@@ -133,6 +140,7 @@ async def remove_from_queue(
     if transcription_instance is None:
         return {"status": "error", "message": "No transcription instance available."}
 
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             shutil.copyfileobj(source_file.file, tmp)
@@ -157,7 +165,7 @@ async def remove_from_queue(
 @router.post("/start/")
 async def start(background_tasks: BackgroundTasks):
     transcription = get_transcription_instance()
-    
+
     if not transcription.transcripts:
         return {"status": "empty", "message": "No items in the transcription queue."}
     

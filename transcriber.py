@@ -3,7 +3,6 @@ import logging
 import traceback
 
 import click
-import requests
 
 from app import (
     __app_name__,
@@ -11,6 +10,7 @@ from app import (
     commands,
     utils
 )
+from app.api_client import APIClient
 from app.commands.cli_utils import ServerCheckGroup, get_transcription_url
 from app.config import settings
 from app.data_writer import DataWriter
@@ -254,6 +254,8 @@ def transcribe(
     """
     configure_logger(log_level=logging.INFO)
     url = get_transcription_url()
+    api_client = APIClient(url)
+
     data = {
         "loc": loc,
         "model": model,
@@ -275,28 +277,27 @@ def transcribe(
         "needs_review": needs_review,
         "cutoff_date": cutoff_date,
     }
-    
-    files = None
-    if source.endswith(".json"):
-        with open(source, "rb") as f:
-            files = {"source_file": (source, f, "application/json")}
-            response = requests.post(f"{url}/transcription/add_to_queue/", data=data, files=files)
-    else:
-        data["source"] = source
-        response = requests.post(f"{url}/transcription/add_to_queue/", data=data)
-    logger.info(response.json())
+    try:
+        queue_response = api_client.add_to_queue(data, source)
+        logger.info(queue_response)
 
-    response = requests.post(f"{url}/transcription/start/")
-    logger.info(response.json())
+        start_response = api_client.start_transcription()
+        logger.info(start_response)
+    except Exception as e:
+        logger.error(f"Transcription operation failed: {e}")
 
 @cli.command()
 def get_queue():
     """Get the transcription queue"""
     configure_logger(log_level=logging.INFO)
     url = get_transcription_url()
+    api_client = APIClient(url)
 
-    response = requests.get(f"{url}/queue/")
-    logger.info(response.json())
+    try:
+        response = api_client.get_queue()
+        logger.info(response)
+    except Exception as e:
+        logger.error(f"Failed to get queue: {e}")
 
 @cli.command()
 @click.argument("source", nargs=1)
@@ -336,6 +337,7 @@ def preprocess(
     """
     configure_logger(log_level=logging.INFO)
     url = get_transcription_url()
+    api_client = APIClient(url)
 
     data = {
         "loc": loc,
@@ -348,18 +350,13 @@ def preprocess(
         "cutoff_date": cutoff_date,
     }
 
-    files = None
-    if source.endswith(".json"):
-        with open(source, "rb") as f:
-            files = {"source_file": (source, f, "application/json")}
-            response = requests.post(f"{url}/transcription/preprocess/", data=data, files=files)
-    else:
-        data["source"] = source
-        response = requests.post(f"{url}/transcription/preprocess/", data=data)
-
-    data_writer = DataWriter("local_models/")
-    file_path = data_writer.write_json(data=response.json()["data"],file_path="",filename="preprocessed_sources")
-    logger.info(f"Data successfully written to {file_path}")
+    try:
+        response_data = api_client.preprocess_source(data, source)
+        data_writer = DataWriter("local_models/")
+        file_path = data_writer.write_json(data=response_data.json()["data"], file_path="", filename="preprocessed_sources")
+        logger.info(f"Data successfully written to {file_path}")
+    except Exception as e:
+        logger.error(f"Preprocessing operation failed: {e}")
 
 @cli.command()
 @click.argument(

@@ -53,6 +53,7 @@ class Transcription:
         batch_preprocessing_output=False,
         needs_review=False,
     ):
+        self.nocleanup = nocleanup
         self.status = "idle"  # Can be "idle", "in_progress", or "completed"
         self.test_mode = test_mode
         self.logger = get_logger()
@@ -72,7 +73,6 @@ class Transcription:
             self.service = services.Whisper(model, upload, self.metadata_writer)
         self.model_output_dir = model_output_dir
         self.transcripts = []
-        self.nocleanup = nocleanup
         # during testing we do not have/need a queuer backend
         self.queuer = Queuer(test_mode=test_mode) if queue is True else None
         self.existing_media = None

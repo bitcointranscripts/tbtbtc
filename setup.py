@@ -29,7 +29,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bitcointranscripts/tstbtc",
-    py_modules=["transcriber"],
+    py_modules=["transcriber","transcriber_server"],
     packages=find_packages(),
     install_requires=[install_requires],
     extras_require=extras_require,
@@ -39,8 +39,10 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    entry_points="""
-        [console_scripts]
-        tstbtc=transcriber:cli
-    """,
+    entry_points={
+        "console_scripts": [
+            "tstbtc=transcriber:cli",
+            "tstbtc-server=transcriber_server:run"
+        ],
+    },
 )

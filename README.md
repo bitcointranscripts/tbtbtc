@@ -103,7 +103,7 @@ This allows the heavy lifting of transcription to be done on a separate machine 
 To start the server, navigate to the application directory and run:
 
 ```sh
-fastapi run server.py
+tstbtc-server prod
 ```
 
 The server will be accessible at `http://localhost:8000` by default.

@@ -1,8 +1,6 @@
 import json
 import os
 
-import whisper
-
 from app import (
     application,
     utils
@@ -19,12 +17,23 @@ class Whisper:
         self.model = model
         self.upload = upload
         self.data_writer = data_writer
+        self._whisper = None
+
+    def _load_whisper(self):
+        if self._whisper is None:
+            try:
+                import whisper
+                self._whisper = whisper
+            except ImportError:
+                raise Exception("Whisper is not installed. Install with 'pip install .[whisper]'")
 
     def audio_to_text(self, audio_file):
         logger.info(
             f"Transcribing audio to text using whisper ({self.model}) ...")
+        self._load_whisper()
+
         try:
-            my_model = whisper.load_model(self.model)
+            my_model = self._whisper.load_model(self.model)
             result = my_model.transcribe(audio_file)
 
             return result

@@ -86,6 +86,7 @@ Navigate to the application directory and run the below commands:
 1. `python3 -m venv venv` creates a virtual environment
 2. `source venv/bin/activate` activates the virtual environment
 3. `pip3 install .` to install the application
+   - To include Whisper support, use: `pip3 install .[whisper]`
 4. Create a `.env` file in the project root and add the required variables based on [Prerequisites](#prerequisites).
 5. `tstbtc --version` view the application version
 6. `tstbtc --help` view the application help

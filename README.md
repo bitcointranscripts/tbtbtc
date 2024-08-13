@@ -162,6 +162,25 @@ mp3_link="https://anchor.fm/s/7d083a4/podcast/play/64348045/https%3A%2F%2Fd3ctxl
 tstbtc transcribe $mp3_link --loc "stephan-livera-podcast" --title 'SLP455 Anant Tapadia - Single Sig or Multi Sig?' --date '2023-02-01' --tags 'multisig' --speakers 'Anant Tapadia' --speakers 'Stephan Livera' --category 'podcast'
 ```
 
+## Docker Support
+
+This application can be run using Docker Compose, which simplifies the process of running both the server and CLI components.
+
+Quick start:
+
+1. Start the server:
+   ```sh
+   docker-compose up server
+   ```
+
+2. Use the CLI:
+   ```sh
+   docker-compose run --rm cli [command] [arguments]
+   ```
+
+For detailed instructions on using Docker with this project, including how to work with local files, environment variables, and custom builds, please refer to our [Docker Guide](docs/docker-guide.md).
+
+
 ## Testing
 
 To run the unit tests

@@ -1,0 +1,16 @@
+services:
+  server:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    command: ["tstbtc-server", "prod"]
+  
+  cli:
+    build: .
+    entrypoint: ["tstbtc"]
+    env_file:
+      - .env
+    environment:
+      - TRANSCRIPTION_SERVER_URL=http://server:8000

@@ -1,8 +1,6 @@
 import os
-
 import configparser
 from dotenv import load_dotenv
-
 
 def read_config(profile):
     config = configparser.ConfigParser()
@@ -13,9 +11,13 @@ class Settings:
     def __init__(self):
         # Reload environment variables from .env file
         load_dotenv(override=True)
+
         # server
         self.TSTBTC_METADATA_DIR = os.getenv('TSTBTC_METADATA_DIR')
-        self.BITCOINTRANSCRIPTS_DIR = os.getenv('BITCOINTRANSCRIPTS_DIR')
+        # GitHub API settings
+        self.GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'bitcointranscripts')
+        self.GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'bitcointranscripts')
+
         # cli
         self.TRANSCRIPTION_SERVER_URL = os.getenv('TRANSCRIPTION_SERVER_URL')
 
@@ -40,7 +42,6 @@ class Settings:
     @property
     def BTC_TRANSCRIPTS_URL(self):
         return self._get_env_variable('BTC_TRANSCRIPTS_URL')
-    
 
     @property
     def S3_BUCKET(self):
@@ -53,6 +54,11 @@ class Settings:
     @property
     def BEARER_TOKEN(self):
         return self._get_env_variable('BEARER_TOKEN')
+
+    @property
+    def GITHUB_TOKEN(self):
+        return self._get_env_variable('GITHUB_TOKEN',
+            "To use GitHub API integration, you need to define a 'GITHUB_TOKEN' in your .env file")
 
 # Initialize the Settings class and expose an instance
 settings = Settings()

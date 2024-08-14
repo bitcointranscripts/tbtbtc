@@ -16,7 +16,6 @@ from app.config import settings
 from app.data_writer import DataWriter
 from app.logging import configure_logger, get_logger
 from app.transcription import Transcription
-from app.types import GitHubMode
 
 logger = get_logger()
 
@@ -108,12 +107,9 @@ username = click.option(
 )
 github = click.option(
     "--github",
-    type=click.Choice(["remote", "local", "none"]),
-    default=settings.config.get('github', 'none'),
-    help=("Specify the GitHub operation mode."
-          "'remote': Create a new branch, push changes to it, and push it to the origin bitcointranscripts repo. "
-          "'local': Commit changes to the current local branch without pushing to the remote repo."
-          "'none': Do not perform any GitHub operations."),
+    is_flag=True,
+    default=settings.config.getboolean('github', False),
+    help="Push the resulting transcript(s) to GitHub",
     show_default=True
 )
 upload_to_s3 = click.option(
@@ -237,7 +233,7 @@ def transcribe(
     speakers: list,
     category: list,
     username: str,
-    github: GitHubMode,
+    github: bool,
     deepgram: bool,
     summarize: bool,
     diarize: bool,
@@ -390,7 +386,7 @@ def postprocess(
     metadata_json_file,
     service,
     username: str,
-    github: GitHubMode,
+    github: bool,
     upload: bool,
     markdown: bool,
     noqueue: bool,
@@ -458,7 +454,7 @@ def postprocess(
         postprocessed_transcript = transcription.postprocess(
             transcript_to_postprocess)
 
-        if transcription.bitcointranscripts_dir:
+        if transcription.github:
             transcription.push_to_github([postprocessed_transcript])
     except Exception as e:
         logger.error(e)

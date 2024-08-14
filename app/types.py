@@ -6,7 +6,6 @@ from typing import (
 )
 
 
-GitHubMode = Literal["remote", "local", "none"]
 TranscriptionCoverage = Optional[Literal["full", "none"]]
 
 

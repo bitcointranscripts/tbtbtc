@@ -1,7 +1,4 @@
 import os
-import shutil
-import random
-import subprocess
 import tempfile
 
 import yaml
@@ -27,18 +24,16 @@ from app import (
 )
 from app.logging import get_logger
 from app.queuer import Queuer
-from app.types import (
-    GitHubMode,
-)
 from app.data_writer import DataWriter
 from app.data_fetcher import DataFetcher
+from app.github_api_handler import GitHubAPIHandler
 
 
 class Transcription:
     def __init__(
         self,
         model="tiny",
-        github: GitHubMode = "none",
+        github=False,
         summarize=False,
         deepgram=False,
         diarize=False,
@@ -64,7 +59,10 @@ class Transcription:
         self.markdown = markdown or test_mode
         self.metadata_writer = DataWriter(
             self.__configure_tstbtc_metadata_dir())
-        self.bitcointranscripts_dir = self.__configure_target_repo(github)
+        self.github = github
+        self.github_handler = None
+        if self.github:
+            self.github_handler = GitHubAPIHandler()
         self.review_flag = self.__configure_review_flag(needs_review)
         if deepgram:
             self.service = services.Deepgram(
@@ -96,23 +94,13 @@ class Transcription:
             return alternative_metadata_dir
         return metadata_dir
 
-    def __configure_target_repo(self, github: GitHubMode):
-        if github == "none":
-            return None
-        git_repo_dir = settings.BITCOINTRANSCRIPTS_DIR
-        if not git_repo_dir:
-            raise Exception(
-                "To push to GitHub you need to define a 'BITCOINTRANSCRIPTS_DIR' in your .env file")
-        self.github = github
-        return git_repo_dir
-
     def __configure_review_flag(self, needs_review):
         # sanity check
         if needs_review and not self.markdown:
             raise Exception(
                 "The `--needs-review` flag is only applicable when creating a markdown")
 
-        if needs_review or self.bitcointranscripts_dir:
+        if needs_review or self.github_handler:
             return " --needs-review"
         else:
             return ""
@@ -365,7 +353,7 @@ class Transcription:
                 self.result.append(postprocessed_transcript)
 
             self.status = "completed"
-            if self.bitcointranscripts_dir:
+            if self.github:
                 self.push_to_github(self.result)
             return self.result
         except Exception as e:
@@ -373,51 +361,14 @@ class Transcription:
             raise Exception(f"Error with the transcription: {e}") from e
 
     def push_to_github(self, outputs: list[PostprocessOutput]):
-        # Change to the directory where your Git repository is located
-        os.chdir(self.bitcointranscripts_dir)
-        if self.github == "remote":
-            # Fetch the latest changes from the remote repository
-            subprocess.run(['git', 'fetch', 'origin', 'master'])
-            # Create a new branch from the fetched 'origin/master'
-            branch_name = f"{self.transcript_by}-{''.join(random.choices('0123456789', k=6))}"
-            subprocess.run(
-                ['git', 'checkout', '-b', branch_name, 'origin/master'])
+        if not self.github_handler:
+            return
 
-        # For each output with markdown, create a new commit in the new branch
-        for output in outputs:
-            if output.get('markdown'):
-                markdown_file = output['markdown']
-                destination_path = os.path.join(
-                    self.bitcointranscripts_dir, output["transcript"].source.loc)
-                # Create the destination directory if it doesn't exist
-                os.makedirs(destination_path, exist_ok=True)
-                # Ensure the markdown file exists before copying
-                if os.path.exists(markdown_file):
-                    markdown_file_name = os.path.basename(markdown_file)
-                    file_base, file_extension = os.path.splitext(
-                        markdown_file_name)
-                    destination_file_path = os.path.join(
-                        destination_path, markdown_file_name)
-                    # In case the source has another
-                    # transcript with the same name
-                    if os.path.exists(destination_file_path):
-                        new_file_name = f"{file_base}-2{file_extension}"
-                        destination_file_path = os.path.join(
-                            destination_path, new_file_name)
-
-                    shutil.copy(markdown_file, destination_file_path)
-                    subprocess.run(['git', 'add', destination_file_path])
-                    subprocess.run(
-                        ['git', 'commit', '-m', f'Add "{output["transcript"].title}" to {output["transcript"].source.loc}'])
-                else:
-                    print(f"Markdown file {markdown_file} does not exist.")
-
-        if self.github == "remote":
-            # Push the branch to the remote repository
-            subprocess.run(['git', 'push', 'origin', branch_name])
-            # Delete branch locally
-            subprocess.run(['git', 'checkout', 'master'])
-            subprocess.run(['git', 'branch', '-D', branch_name])
+        pr_url = self.github_handler.push_transcripts(outputs, self.transcript_by)
+        if pr_url:
+            self.logger.info(f"Pull request created: {pr_url}")
+        else:
+            self.logger.error("Failed to create pull request.")
 
     def write_to_markdown_file(self, transcript: Transcript, output_dir):
         """Writes transcript to a markdown file and returns its absolute path
@@ -481,7 +432,7 @@ class Transcription:
             result = {}
             result["transcript"] = transcript
             output_dir = f"{self.model_output_dir}/{transcript.source.loc}"
-            if self.markdown or self.bitcointranscripts_dir:
+            if self.markdown or self.github_handler:
                 result["markdown"] = self.write_to_markdown_file(
                     transcript,
                     output_dir if not self.test_mode else transcript.tmp_dir)

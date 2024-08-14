@@ -7,7 +7,6 @@ from typing import Optional
 
 from app.logging import get_logger
 from app.transcription import Transcription
-from app.types import GitHubMode
 
 logger = get_logger()
 router = APIRouter(tags=["Transcription"])
@@ -78,7 +77,7 @@ async def add_to_queue(
     tags: list[str] = Form([]),
     speakers: list[str] = Form([]),
     category: list[str] = Form([]),
-    github: GitHubMode = Form("none"),
+    github: bool = Form(False),
     deepgram: bool = Form(False),
     summarize: bool = Form(False),
     diarize: bool = Form(False),

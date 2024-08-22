@@ -327,7 +327,7 @@ class Video(Source):
                     for index, x in enumerate(yt_info["chapters"]):
                         name = x["title"]
                         start = x["start_time"]
-                        self.chapters.append((str(index), start, str(name)))
+                        self.chapters.append([str(index), start, str(name)])
         except yt_dlp.DownloadError as e:
             raise Exception(f"Error with downloading YouTube metadata: {e}")
 

@@ -5,74 +5,75 @@ from urllib.parse import quote
 import random
 import time
 
+from app import logging
 from app.config import settings
 from app.transcript import Transcript
 
+logger = logging.get_logger()
+
 class GitHubAPIHandler:
-    def __init__(self, token=None, target_repo_owner=None, target_repo_name=None):
+    def __init__(self, token=None):
         self.token = token or settings.GITHUB_TOKEN
-        self.target_repo_owner = target_repo_owner or settings.GITHUB_REPO_OWNER
-        self.target_repo_name = target_repo_name or settings.GITHUB_REPO_NAME
         self.headers = {
             "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json"
         }
         self.user = self.get_authenticated_user()
-        self.fork_url = f"https://api.github.com/repos/{self.user}/{self.target_repo_name}"
-        self.origin_url = f"https://api.github.com/repos/{self.target_repo_owner}/{self.target_repo_name}"
-        self.check_token_permissions()
-        self.ensure_fork_exists()
+        self.repos = {
+            'transcripts': {
+                'owner': settings.GITHUB_REPO_OWNER,
+                'name': settings.GITHUB_REPO_NAME,
+            },
+            'metadata': {
+                'owner': settings.GITHUB_REPO_OWNER,
+                'name': settings.GITHUB_METADATA_REPO_NAME,
+            }
+        }
+        self.fork_urls = {}
+        self.origin_urls = {}
+        for repo_type in self.repos:
+            self.fork_urls[repo_type] = f"https://api.github.com/repos/{self.user}/{self.repos[repo_type]['name']}"
+            self.origin_urls[repo_type] = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}"
+        
+        for repo_type in self.repos:
+            self.ensure_fork_exists(repo_type)
 
     def get_authenticated_user(self):
         response = requests.get("https://api.github.com/user", headers=self.headers)
         response.raise_for_status()
         return response.json()['login']
 
-    def check_token_permissions(self):
-        try:
-            # Check user repository permissions
-            response = requests.get(self.fork_url, headers=self.headers)
-            if response.status_code == 404:
-                # Repository doesn't exist, so we'll need fork permissions
-                response = requests.get("https://api.github.com/user/repos", headers=self.headers, params={"per_page": 1})
-                response.raise_for_status()  # This will raise an exception if we can't list repos (don't have repo or public_repo scope)
-            else:
-                response.raise_for_status()  # This will raise an exception if we can't access the repo
+    def get_repo_url(self, repo_type, is_fork=False):
+        repo = self.repos[repo_type]
+        owner = self.user if is_fork else repo['owner']
+        return f"https://api.github.com/repos/{owner}/{repo['name']}"
 
-            # Check permissions on target repository
-            response = requests.get(self.origin_url, headers=self.headers)
-            response.raise_for_status()
-
-        except requests.exceptions.RequestException as e:
-            raise PermissionError(f"The provided token does not have sufficient permissions: {str(e)}")
-
-    def ensure_fork_exists(self):
+    def ensure_fork_exists(self, repo_type):
         # Check if fork exists
-        response = requests.get(self.fork_url, headers=self.headers)
+        response = requests.get(self.fork_urls[repo_type], headers=self.headers)
         if response.status_code == 404:
             # Fork doesn't exist, create it
-            response = requests.post(f"{self.origin_url}/forks", headers=self.headers)
+            response = requests.post(f"{self.origin_urls[repo_type]}/forks", headers=self.headers)
             response.raise_for_status()
-            print(f"Created fork: {response.json()['html_url']}")
+            logger.info(f"Created fork for {repo_type}: {response.json()['html_url']}")
             # Wait for fork to be ready
             time.sleep(5)
         elif response.status_code != 200:
             response.raise_for_status()
 
-    def get_default_branch(self):
-        response = requests.get(self.origin_url, headers=self.headers)
+    def get_default_branch(self, repo_type):
+        response = requests.get(self.origin_urls[repo_type], headers=self.headers)
         response.raise_for_status()
         return response.json()["default_branch"]
 
-    def get_branch_sha(self, branch):
-        response = requests.get(f"{self.origin_url}/git/ref/heads/{branch}", headers=self.headers)
+    def get_branch_sha(self, repo_type, branch):
+        response = requests.get(f"{self.origin_urls[repo_type]}/git/ref/heads/{branch}", headers=self.headers)
         response.raise_for_status()
         return response.json()["object"]["sha"]
 
-    def create_branch(self, branch_name, sha):
-        # Create the branch in the fork
+    def create_branch(self, repo_type, branch_name, sha):
         response = requests.post(
-            f"{self.fork_url}/git/refs",
+            f"{self.fork_urls[repo_type]}/git/refs",
             headers=self.headers,
             json={
                 "ref": f"refs/heads/{branch_name}",
@@ -82,16 +83,10 @@ class GitHubAPIHandler:
         response.raise_for_status()
         return response.json()
 
-    def delete_branch(self, branch_name):
-        response = requests.delete(
-            f"{self.fork_url}/git/refs/heads/{branch_name}",
-            headers=self.headers
-        )
-        response.raise_for_status()
 
-    def create_or_update_file(self, file_path, content, commit_message, branch):
+    def create_or_update_file(self, repo_type, file_path, content, commit_message, branch):
         response = requests.put(
-            f"{self.fork_url}/contents/{quote(file_path)}",
+            f"{self.fork_urls[repo_type]}/contents/{quote(file_path)}",
             headers=self.headers,
             json={
                 "message": commit_message,
@@ -102,9 +97,10 @@ class GitHubAPIHandler:
         response.raise_for_status()
         return response.json()
 
-    def create_pull_request(self, title, head, base, body):
+
+    def create_pull_request(self, repo_type, title, head, base, body):
         response = requests.post(
-            f"{self.origin_url}/pulls",
+            f"{self.origin_urls[repo_type]}/pulls",
             headers=self.headers,
             json={
                 "title": title,
@@ -116,44 +112,141 @@ class GitHubAPIHandler:
         response.raise_for_status()
         return response.json()
 
-    def push_transcripts(self, transcripts: list[Transcript], transcript_by: str):
+    def push_transcripts(self, transcripts: list[Transcript]) -> str | None:
         try:
-            # Get the default branch of the origin repo
-            default_branch = self.get_default_branch()
-
-            # Get the SHA of the latest commit on the default branch of the origin repo
-            branch_sha = self.get_branch_sha(default_branch)
-
             # Create a new branch in the user's fork, but based on the origin's latest commit
-            branch_name = f"{transcript_by}-{''.join(random.choices('0123456789', k=6))}"
-            self.create_branch(branch_name, branch_sha)
+            default_branch = self.get_default_branch('transcripts')
+            branch_sha = self.get_branch_sha('transcripts', default_branch)
+            branch_name = f"transcripts-{''.join(random.choices('0123456789', k=6))}"
+            self.create_branch('transcripts', branch_name, branch_sha)
 
-            # For each transcript with markdown, create a new commit in the new branch
             for transcript in transcripts:
                 if transcript.outputs and transcript.outputs['markdown']:
-
-                    # Read the content of the markdown file
                     with open(transcript.outputs['markdown'], 'r') as file:
                         content = file.read()
-
-                    # Create or update the file in the repository
                     self.create_or_update_file(
+                        'transcripts',
                         transcript.output_path_with_title,
                         content,
-                        f'Add "{transcript.title}" to {transcript.source.loc}',
+                        f'ai(transcript): {transcript.title} ({transcript.source.loc})',
                         branch_name
                     )
 
-            # Create a pull request
             pr = self.create_pull_request(
-                f"Add transcripts by {transcript_by}",
+                'transcripts',
+                f"ai(transcript): Add {len(transcripts)} transcripts",
                 branch_name,
                 default_branch,
-                "This PR adds new transcripts generated by tstbtc."
+                f"This PR adds {len(transcripts)} new transcripts generated by [tstbtc](https://github.com/bitcointranscripts/tstbtc)."
             )
 
             return pr['html_url']
-
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred while interacting with the GitHub API: {e}")
+            logger.error(f"An error occurred while interacting with the GitHub API: {e}")
             return None
+
+    def push_metadata(self, transcripts: list[Transcript], transcripts_pr_url: str):
+        try:
+            default_branch = self.get_default_branch('metadata')
+            branch_sha = self.get_branch_sha('metadata', default_branch)
+            branch_name = f"metadata-{''.join(random.choices('0123456789', k=6))}"
+            self.create_branch('metadata', branch_name, branch_sha)
+
+            for transcript in transcripts:
+                metadata_files = [
+                    transcript.metadata_file,
+                    transcript.outputs["transcription_service_output_file"],
+                    transcript.outputs.get("dpe_file")
+                ]
+                
+                # Group all metadata files for this transcript into a single commit
+                commit_files = []
+                for file_path in metadata_files:
+                    if file_path:
+                        with open(file_path, 'r') as file:
+                            content = file.read()
+                        commit_files.append({
+                            'path': os.path.join(transcript.output_path_with_title, os.path.basename(file_path)),
+                            'content': content
+                        })
+                
+                if commit_files:
+                    self.create_commit_with_multiple_files(
+                        'metadata',
+                        commit_files,
+                        f"ai(transcript): {transcript.title} ({transcript.source.loc})",
+                        branch_name
+                    )
+
+            pr_body = (
+                f"This PR adds metadata for {len(transcripts)} new transcripts generated by tstbtc.\n\n"
+                f"Related transcripts PR: {transcripts_pr_url}"
+            )
+
+            pr = self.create_pull_request(
+                'metadata',
+                f"ai(transcript): Add metadata for {len(transcripts)} transcripts",
+                branch_name,
+                default_branch,
+                pr_body
+            )
+
+            return pr['html_url']
+        except requests.exceptions.RequestException as e:
+            logger.error(f"An error occurred while interacting with the GitHub API for metadata: {e}")
+            return None
+
+    def create_commit_with_multiple_files(self, repo_type, files, commit_message, branch):
+        # Get the latest commit SHA for the branch
+        branch_ref = requests.get(f"{self.fork_urls[repo_type]}/git/ref/heads/{branch}", headers=self.headers)
+        branch_ref.raise_for_status()
+        latest_commit_sha = branch_ref.json()['object']['sha']
+
+        # Get the tree SHA of the latest commit
+        latest_commit = requests.get(f"{self.fork_urls[repo_type]}/git/commits/{latest_commit_sha}", headers=self.headers)
+        latest_commit.raise_for_status()
+        base_tree_sha = latest_commit.json()['tree']['sha']
+
+        # Create a new tree with the new files
+        new_tree = []
+        for file in files:
+            new_tree.append({
+                'path': file['path'],
+                'mode': '100644',
+                'type': 'blob',
+                'content': file['content']
+            })
+
+        tree_response = requests.post(
+            f"{self.fork_urls[repo_type]}/git/trees",
+            headers=self.headers,
+            json={
+                'base_tree': base_tree_sha,
+                'tree': new_tree
+            }
+        )
+        tree_response.raise_for_status()
+        new_tree_sha = tree_response.json()['sha']
+
+        # Create a new commit
+        commit_response = requests.post(
+            f"{self.fork_urls[repo_type]}/git/commits",
+            headers=self.headers,
+            json={
+                'message': commit_message,
+                'tree': new_tree_sha,
+                'parents': [latest_commit_sha]
+            }
+        )
+        commit_response.raise_for_status()
+        new_commit_sha = commit_response.json()['sha']
+
+        # Update the branch reference
+        update_ref_response = requests.patch(
+            f"{self.fork_urls[repo_type]}/git/refs/heads/{branch}",
+            headers=self.headers,
+            json={'sha': new_commit_sha}
+        )
+        update_ref_response.raise_for_status()
+
+        return new_commit_sha

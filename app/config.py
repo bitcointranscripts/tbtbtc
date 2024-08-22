@@ -17,6 +17,7 @@ class Settings:
         # GitHub API settings
         self.GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', 'bitcointranscripts')
         self.GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'bitcointranscripts')
+        self.GITHUB_METADATA_REPO_NAME = os.getenv('GITHUB_METADATA_REPO_NAME', 'bitcointranscripts-metadata')
 
         # cli
         self.TRANSCRIPTION_SERVER_URL = os.getenv('TRANSCRIPTION_SERVER_URL')

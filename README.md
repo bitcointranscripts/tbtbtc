@@ -171,8 +171,9 @@ To push the resulting transcript(s) to GitHub:
    GITHUB_TOKEN=your_personal_access_token
    GITHUB_REPO_OWNER=target_repo_owner
    GITHUB_REPO_NAME=target_repo_name
+   GITHUB_METADATA_REPO_NAME=target_metadata_repo_name
    ```
-   Replace `target_repo_owner` and `target_repo_name` with the owner and name of the repository you want to contribute to.
+   Replace `target_repo_owner`, `target_repo_name`, and `target_metadata_repo_name` with the owner and name of the repository you want to contribute to.
 3. Use the `--github` flag when running the script to automatically fork the target repository (if needed), create a branch in your fork, and submit a pull request to the target repository.
 
 ## Docker Support

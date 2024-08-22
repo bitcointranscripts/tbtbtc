@@ -361,11 +361,16 @@ class Transcription:
         if not self.github_handler:
             return
 
-        pr_url = self.github_handler.push_transcripts(transcripts, self.transcript_by)
-        if pr_url:
-            self.logger.info(f"Pull request created: {pr_url}")
+        pr_url_transcripts = self.github_handler.push_transcripts(transcripts)
+        if pr_url_transcripts:
+            self.logger.info(f"transcripts: Pull request created: {pr_url_transcripts}")
+            pr_url_metadata = self.github_handler.push_metadata(transcripts, pr_url_transcripts)
+            if pr_url_metadata:
+                self.logger.info(f"metadata: Pull request created: {pr_url_metadata}")
+            else:
+                self.logger.error("metadata: Failed to create pull request.")
         else:
-            self.logger.error("Failed to create pull request.")
+            self.logger.error("transcripts: Failed to create pull request.")
 
     def write_to_markdown_file(self, transcript: Transcript, output_dir):
         """Writes transcript to a markdown file and returns its absolute path

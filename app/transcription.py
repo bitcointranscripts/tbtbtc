@@ -7,7 +7,6 @@ import yt_dlp
 from app.config import settings
 from app.exceptions import DuplicateSourceError
 from app.transcript import (
-    PostprocessOutput,
     Transcript,
     Source,
     Audio,
@@ -70,7 +69,7 @@ class Transcription:
         else:
             self.service = services.Whisper(model, upload, self.metadata_writer)
         self.model_output_dir = model_output_dir
-        self.transcripts = []
+        self.transcripts: list[Transcript] = []
         # during testing we do not have/need a queuer backend
         self.queuer = Queuer(test_mode=test_mode) if queue is True else None
         self.existing_media = None
@@ -334,7 +333,6 @@ class Transcription:
 
     def start(self, test_transcript=None):
         self.status = "in_progress"
-        self.result = []
         try:
             for transcript in self.transcripts:
                 transcript.status = "in_progress"
@@ -342,29 +340,28 @@ class Transcription:
                 self.logger.info(
                     f"Processing source: {transcript.source.source_file}")
                 transcript.tmp_dir = self._create_subdirectory(
-                    f"transcript{len(self.result) + 1}")
+                    f"transcript-{utils.slugify(transcript.title)}")
                 transcript.process_source(transcript.tmp_dir)
                 if self.test_mode:
-                    transcript.result = test_transcript if test_transcript is not None else "test-mode"
+                    transcript.outputs["raw"] = test_transcript if test_transcript is not None else "test-mode"
                 else:
-                    transcript = self.service.transcribe(transcript)
+                    self.service.transcribe(transcript)
                 transcript.status = "completed"
-                postprocessed_transcript = self.postprocess(transcript)
-                self.result.append(postprocessed_transcript)
+                self.postprocess(transcript)
 
             self.status = "completed"
             if self.github:
-                self.push_to_github(self.result)
-            return self.result
+                self.push_to_github(self.transcripts)
+            return self.transcripts
         except Exception as e:
             self.status = "failed"
             raise Exception(f"Error with the transcription: {e}") from e
 
-    def push_to_github(self, outputs: list[PostprocessOutput]):
+    def push_to_github(self, transcripts: list[Transcript]):
         if not self.github_handler:
             return
 
-        pr_url = self.github_handler.push_transcripts(outputs, self.transcript_by)
+        pr_url = self.github_handler.push_transcripts(transcripts, self.transcript_by)
         if pr_url:
             self.logger.info(f"Pull request created: {pr_url}")
         else:
@@ -377,6 +374,8 @@ class Transcription:
         """
         self.logger.info("Creating markdown file with transcription...")
         try:
+            if transcript.outputs["raw"] is None:
+                raise Exception("No transcript found")
             # Add metadata prefix
             meta_data = (
                 "---\n"
@@ -408,7 +407,7 @@ class Transcription:
             markdown_file = f"{utils.configure_output_file_path(output_dir, transcript.title, add_timestamp=False)}.md"
             with open(markdown_file, "w") as opf:
                 opf.write(meta_data)
-                opf.write(transcript.result + "\n")
+                opf.write(transcript.outputs["raw"] + "\n")
             self.logger.info(f"Markdown file stored at: {markdown_file}")
             return os.path.abspath(markdown_file)
         except Exception as e:
@@ -427,13 +426,11 @@ class Transcription:
         self.logger.info(f"Transcription stored at {json_file}")
         return json_file
 
-    def postprocess(self, transcript: Transcript) -> PostprocessOutput:
+    def postprocess(self, transcript: Transcript) -> None:
         try:
-            result = {}
-            result["transcript"] = transcript
             output_dir = f"{self.model_output_dir}/{transcript.source.loc}"
             if self.markdown or self.github_handler:
-                result["markdown"] = self.write_to_markdown_file(
+                transcript.outputs["markdown"] = self.write_to_markdown_file(
                     transcript,
                     output_dir if not self.test_mode else transcript.tmp_dir)
             elif not self.test_mode:
@@ -443,8 +440,7 @@ class Transcription:
                     return self.queuer.push_to_queue(transcript_json)
                 else:
                     # store payload for the user to manually send it to the queuer
-                    result["json"] = self.write_to_json_file(transcript)
-            return result
+                    transcript.outputs["json"] = self.write_to_json_file(transcript)
         except Exception as e:
             raise Exception(f"Error with postprocessing: {e}") from e
 

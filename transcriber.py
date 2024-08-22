@@ -433,7 +433,7 @@ def postprocess(
             cutoff_date=metadata["cutoff_date"]
         )
         # Finalize transcription service output
-        transcript_to_postprocess = transcription.transcripts[0]
+        transcript = transcription.transcripts[0]
         if metadata.get("deepgram_chunks"):
             logger.info("Combining deepgram chunk outputs...")
             all_chunks_output = []
@@ -443,19 +443,16 @@ def postprocess(
             overlap_between_chunks = 30.0  # or any other value used during splitting
             transcription_service_output = transcription.service.combine_chunk_outputs(
                 all_chunks_output, overlap=overlap_between_chunks)
-            transcript_to_postprocess.transcription_service_output_file = transcription.service.write_to_json_file(
-                transcription_service_output, transcript_to_postprocess)
+            transcript.outputs["transcription_service_output_file"] = transcription.service.write_to_json_file(
+                transcription_service_output, transcript)
         else:
-            transcript_to_postprocess.transcription_service_output_file = metadata[
-                f"{service}_output"]
+            transcript.outputs["transcription_service_output_file"] = metadata[f"{service}_output"]
 
-        transcript_to_postprocess.result = transcription.service.finalize_transcript(
-            transcript_to_postprocess)
-        postprocessed_transcript = transcription.postprocess(
-            transcript_to_postprocess)
+        transcription.service.finalize_transcript(transcript)
+        transcription.postprocess(transcript)
 
         if transcription.github:
-            transcription.push_to_github([postprocessed_transcript])
+            transcription.push_to_github([transcript])
     except Exception as e:
         logger.error(e)
         traceback.print_exc()

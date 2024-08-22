@@ -32,9 +32,9 @@ def test_video_with_title():
         source_file=source, title=title, date=date, tags=tags, category=category, speakers=speakers)
     transcripts = transcription.start()
 
-    assert os.path.isfile(transcripts[0]["markdown"])
+    assert os.path.isfile(transcripts[0].outputs["markdown"])
     check_md_file(
-        path=transcripts[0]["markdown"],
+        path=transcripts[0].outputs["markdown"],
         transcript_by=username,
         media=source,
         title=title,
@@ -63,10 +63,10 @@ def test_video_with_all_options():
     transcription.add_transcription_source(
         source_file=source, title=title, date=date, tags=tags, category=category, speakers=speakers)
     transcripts = transcription.start()
-    assert os.path.isfile(transcripts[0]["markdown"])
+    assert os.path.isfile(transcripts[0].outputs["markdown"])
 
     check_md_file(
-        path=transcripts[0]["markdown"],
+        path=transcripts[0].outputs["markdown"],
         transcript_by=username,
         media=source,
         title=title,
@@ -107,9 +107,9 @@ def test_video_with_chapters():
                 chapter_names.append(x.split("= ")[1].strip())
         file.close()
 
-    assert os.path.isfile(transcripts[0]["markdown"])
+    assert os.path.isfile(transcripts[0].outputs["markdown"])
     check_md_file(
-        path=transcripts[0]["markdown"],
+        path=transcripts[0].outputs["markdown"],
         transcript_by=username,
         media=source,
         title=title,

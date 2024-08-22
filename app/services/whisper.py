@@ -115,34 +115,32 @@ class Whisper:
             logger.error("Error combining chapters")
             logger.error(e)
 
-    def finalize_transcript(self, transcript: Transcript):
+    def finalize_transcript(self, transcript: Transcript) -> None:
         try:
-            if not transcript.transcription_service_output_file:
+            if not transcript.outputs["transcription_service_output_file"]:
                 raise Exception("No 'whisper_output' found in JSON")
-            with open(transcript.transcription_service_output_file, "r") as outfile:
+            with open(transcript.outputs["transcription_service_output_file"], "r") as outfile:
                 transcription_service_output = json.load(outfile)
 
             has_chapters = len(transcript.source.chapters) > 0
             if has_chapters:
                 # Source has chapters, add them to transcript
-                return self.process_with_chapters(transcription_service_output, transcript.source.chapters)
+                transcript.outputs["raw"] = self.process_with_chapters(transcription_service_output, transcript.source.chapters)
             else:
-                return transcription_service_output["text"]
+                transcript.outputs["raw"] = transcription_service_output["text"]
         except Exception as e:
             raise Exception(f"(whisper) Error finalizing transcript: {e}")
 
-    def transcribe(self, transcript: Transcript):
+    def transcribe(self, transcript: Transcript) -> None:
         try:
             transcription_service_output = self.audio_to_text(
                 transcript.audio_file)
-            transcript.transcription_service_output_file = self.write_to_json_file(
+            transcript.outputs["transcription_service_output_file"] = self.write_to_json_file(
                 transcription_service_output, transcript)
-            transcript_srt_file = self.generate_srt(
+            transcript.outputs["srt_file"] = self.generate_srt(
                 transcription_service_output, transcript)
             if self.upload:
-                application.upload_file_to_s3(transcript_srt_file)
-            transcript.result = self.finalize_transcript(transcript)
-
-            return transcript
+                application.upload_file_to_s3(transcript.outputs["srt_file"])
+            self.finalize_transcript(transcript)
         except Exception as e:
             raise Exception(f"(whisper) Error while transcribing: {e}")

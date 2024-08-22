@@ -25,9 +25,9 @@ def test_audio_with_title():
     )
     transcription.add_transcription_source(source_file=source, title=title)
     transcripts = transcription.start()
-    assert os.path.isfile(transcripts[0]["markdown"])
+    assert os.path.isfile(transcripts[0].outputs["markdown"])
     check_md_file(
-        path=transcripts[0]["markdown"],
+        path=transcripts[0].outputs["markdown"],
         transcript_by=username,
         media=source,
         title=title,
@@ -55,9 +55,9 @@ def test_audio_with_all_data():
         source_file=source, title=title, date=date, tags=tags, category=category, speakers=speakers)
     transcripts = transcription.start()
 
-    assert os.path.isfile(transcripts[0]["markdown"])
+    assert os.path.isfile(transcripts[0].outputs["markdown"])
     check_md_file(
-        path=transcripts[0]["markdown"],
+        path=transcripts[0].outputs["markdown"],
         transcript_by=username,
         media=source,
         title=title,

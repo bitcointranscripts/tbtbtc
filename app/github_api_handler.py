@@ -6,6 +6,7 @@ import random
 import time
 
 from app.config import settings
+from app.transcript import Transcript
 
 class GitHubAPIHandler:
     def __init__(self, token=None, target_repo_owner=None, target_repo_name=None):
@@ -115,7 +116,7 @@ class GitHubAPIHandler:
         response.raise_for_status()
         return response.json()
 
-    def push_transcripts(self, outputs, transcript_by):
+    def push_transcripts(self, transcripts: list[Transcript], transcript_by: str):
         try:
             # Get the default branch of the origin repo
             default_branch = self.get_default_branch()
@@ -127,21 +128,19 @@ class GitHubAPIHandler:
             branch_name = f"{transcript_by}-{''.join(random.choices('0123456789', k=6))}"
             self.create_branch(branch_name, branch_sha)
 
-            # For each output with markdown, create a new commit in the new branch
-            for output in outputs:
-                if output.get('markdown'):
-                    markdown_file = output['markdown']
-                    destination_path = os.path.join(output["transcript"].source.loc, os.path.basename(markdown_file))
+            # For each transcript with markdown, create a new commit in the new branch
+            for transcript in transcripts:
+                if transcript.outputs and transcript.outputs['markdown']:
 
                     # Read the content of the markdown file
-                    with open(markdown_file, 'r') as file:
+                    with open(transcript.outputs['markdown'], 'r') as file:
                         content = file.read()
 
                     # Create or update the file in the repository
                     self.create_or_update_file(
-                        destination_path,
+                        transcript.output_path_with_title,
                         content,
-                        f'Add "{output["transcript"].title}" to {output["transcript"].source.loc}',
+                        f'Add "{transcript.title}" to {transcript.source.loc}',
                         branch_name
                     )
 

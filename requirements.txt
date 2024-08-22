@@ -7,7 +7,7 @@ requests==2.32.3
 setuptools==45.2.0
 static_ffmpeg==2.3
 ffmpeg-python==0.2.0
-yt_dlp==2023.10.13
+yt-dlp==2024.8.6
 deepgram-sdk==2.4.0
 boto3==1.26.143
 black==23.3.0

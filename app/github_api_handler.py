@@ -1,9 +1,11 @@
 import os
 import base64
 import requests
+from datetime import datetime, timezone
+import jwt
+import time
 from urllib.parse import quote
 import random
-import time
 
 from app import logging
 from app.config import settings
@@ -12,13 +14,15 @@ from app.transcript import Transcript
 logger = logging.get_logger()
 
 class GitHubAPIHandler:
-    def __init__(self, token=None):
-        self.token = token or settings.GITHUB_TOKEN
+    def __init__(self):
+        self.app_id = settings.GITHUB_APP_ID
+        self.private_key = settings.GITHUB_PRIVATE_KEY
+        self.installation_id = settings.GITHUB_INSTALLATION_ID
+        self.access_token = None
+        self.token_expires_at = 0
         self.headers = {
-            "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github.v3+json"
         }
-        self.user = self.get_authenticated_user()
         self.repos = {
             'transcripts': {
                 'owner': settings.GITHUB_REPO_OWNER,
@@ -29,92 +33,89 @@ class GitHubAPIHandler:
                 'name': settings.GITHUB_METADATA_REPO_NAME,
             }
         }
-        self.fork_urls = {}
-        self.origin_urls = {}
-        for repo_type in self.repos:
-            self.fork_urls[repo_type] = f"https://api.github.com/repos/{self.user}/{self.repos[repo_type]['name']}"
-            self.origin_urls[repo_type] = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}"
-        
-        for repo_type in self.repos:
-            self.ensure_fork_exists(repo_type)
 
-    def get_authenticated_user(self):
-        response = requests.get("https://api.github.com/user", headers=self.headers)
+    def _generate_jwt(self):
+        now = int(time.time())
+        payload = {
+            "iat": now,
+            "exp": now + 600,
+            "iss": self.app_id
+        }
+        return jwt.encode(payload, self.private_key, algorithm="RS256")
+
+    def _get_installation_access_token(self):
+        if self.access_token and time.time() < self.token_expires_at:
+            return self.access_token
+
+        jwt_token = self._generate_jwt()
+        headers = {
+            "Authorization": f"Bearer {jwt_token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        response = requests.post(
+            f"https://api.github.com/app/installations/{self.installation_id}/access_tokens",
+            headers=headers
+        )
         response.raise_for_status()
-        return response.json()['login']
+        data = response.json()
+        self.access_token = data['token']
+        expires_at_dt = datetime.strptime(data['expires_at'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        self.token_expires_at = expires_at_dt.timestamp()
+        return self.access_token
 
-    def get_repo_url(self, repo_type, is_fork=False):
-        repo = self.repos[repo_type]
-        owner = self.user if is_fork else repo['owner']
-        return f"https://api.github.com/repos/{owner}/{repo['name']}"
-
-    def ensure_fork_exists(self, repo_type):
-        # Check if fork exists
-        response = requests.get(self.fork_urls[repo_type], headers=self.headers)
-        if response.status_code == 404:
-            # Fork doesn't exist, create it
-            response = requests.post(f"{self.origin_urls[repo_type]}/forks", headers=self.headers)
-            response.raise_for_status()
-            logger.info(f"Created fork for {repo_type}: {response.json()['html_url']}")
-            # Wait for fork to be ready
-            time.sleep(5)
-        elif response.status_code != 200:
-            response.raise_for_status()
+    def _make_request(self, method, url, **kwargs):
+        token = self._get_installation_access_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        headers.update(kwargs.pop('headers', {}))
+        response = requests.request(method, url, headers=headers, **kwargs)
+        response.raise_for_status()
+        return response
 
     def get_default_branch(self, repo_type):
-        response = requests.get(self.origin_urls[repo_type], headers=self.headers)
-        response.raise_for_status()
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}"
+        response = self._make_request('GET', url)
         return response.json()["default_branch"]
 
     def get_branch_sha(self, repo_type, branch):
-        response = requests.get(f"{self.origin_urls[repo_type]}/git/ref/heads/{branch}", headers=self.headers)
-        response.raise_for_status()
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/git/ref/heads/{branch}"
+        response = self._make_request('GET', url)
         return response.json()["object"]["sha"]
 
     def create_branch(self, repo_type, branch_name, sha):
-        response = requests.post(
-            f"{self.fork_urls[repo_type]}/git/refs",
-            headers=self.headers,
-            json={
-                "ref": f"refs/heads/{branch_name}",
-                "sha": sha
-            }
-        )
-        response.raise_for_status()
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/git/refs"
+        data = {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": sha
+        }
+        response = self._make_request('POST', url, json=data)
         return response.json()
-
 
     def create_or_update_file(self, repo_type, file_path, content, commit_message, branch):
-        response = requests.put(
-            f"{self.fork_urls[repo_type]}/contents/{quote(file_path)}",
-            headers=self.headers,
-            json={
-                "message": commit_message,
-                "content": base64.b64encode(content.encode()).decode(),
-                "branch": branch
-            }
-        )
-        response.raise_for_status()
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/contents/{quote(file_path)}"
+        data = {
+            "message": commit_message,
+            "content": base64.b64encode(content.encode()).decode(),
+            "branch": branch
+        }
+        response = self._make_request('PUT', url, json=data)
         return response.json()
 
-
     def create_pull_request(self, repo_type, title, head, base, body):
-        response = requests.post(
-            f"{self.origin_urls[repo_type]}/pulls",
-            headers=self.headers,
-            json={
-                "title": title,
-                "head": f"{self.user}:{head}",
-                "base": base,
-                "body": body
-            }
-        )
-        response.raise_for_status()
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/pulls"
+        data = {
+            "title": title,
+            "head": head,
+            "base": base,
+            "body": body
+        }
+        response = self._make_request('POST', url, json=data)
         return response.json()
 
     def push_transcripts(self, transcripts: list[Transcript]) -> str | None:
         try:
-            # Create a new branch in the user's fork, but based on the origin's latest commit
             default_branch = self.get_default_branch('transcripts')
             branch_sha = self.get_branch_sha('transcripts', default_branch)
             branch_name = f"transcripts-{''.join(random.choices('0123456789', k=6))}"
@@ -128,7 +129,7 @@ class GitHubAPIHandler:
                         'transcripts',
                         transcript.output_path_with_title,
                         content,
-                        f'ai(transcript): {transcript.title} ({transcript.source.loc})',
+                        f'ai(transcript): "{transcript.title}" ({transcript.source.loc})',
                         branch_name
                     )
 
@@ -174,7 +175,7 @@ class GitHubAPIHandler:
                     self.create_commit_with_multiple_files(
                         'metadata',
                         commit_files,
-                        f"ai(transcript): {transcript.title} ({transcript.source.loc})",
+                        f'ai(transcript): "{transcript.title}" ({transcript.source.loc})',
                         branch_name
                     )
 
@@ -197,15 +198,10 @@ class GitHubAPIHandler:
             return None
 
     def create_commit_with_multiple_files(self, repo_type, files, commit_message, branch):
+        url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/git/trees"
+        
         # Get the latest commit SHA for the branch
-        branch_ref = requests.get(f"{self.fork_urls[repo_type]}/git/ref/heads/{branch}", headers=self.headers)
-        branch_ref.raise_for_status()
-        latest_commit_sha = branch_ref.json()['object']['sha']
-
-        # Get the tree SHA of the latest commit
-        latest_commit = requests.get(f"{self.fork_urls[repo_type]}/git/commits/{latest_commit_sha}", headers=self.headers)
-        latest_commit.raise_for_status()
-        base_tree_sha = latest_commit.json()['tree']['sha']
+        branch_sha = self.get_branch_sha(repo_type, branch)
 
         # Create a new tree with the new files
         new_tree = []
@@ -217,36 +213,26 @@ class GitHubAPIHandler:
                 'content': file['content']
             })
 
-        tree_response = requests.post(
-            f"{self.fork_urls[repo_type]}/git/trees",
-            headers=self.headers,
-            json={
-                'base_tree': base_tree_sha,
-                'tree': new_tree
-            }
-        )
-        tree_response.raise_for_status()
+        tree_data = {
+            'base_tree': branch_sha,
+            'tree': new_tree
+        }
+        tree_response = self._make_request('POST', url, json=tree_data)
         new_tree_sha = tree_response.json()['sha']
 
         # Create a new commit
-        commit_response = requests.post(
-            f"{self.fork_urls[repo_type]}/git/commits",
-            headers=self.headers,
-            json={
-                'message': commit_message,
-                'tree': new_tree_sha,
-                'parents': [latest_commit_sha]
-            }
-        )
-        commit_response.raise_for_status()
+        commit_url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/git/commits"
+        commit_data = {
+            'message': commit_message,
+            'tree': new_tree_sha,
+            'parents': [branch_sha]
+        }
+        commit_response = self._make_request('POST', commit_url, json=commit_data)
         new_commit_sha = commit_response.json()['sha']
 
         # Update the branch reference
-        update_ref_response = requests.patch(
-            f"{self.fork_urls[repo_type]}/git/refs/heads/{branch}",
-            headers=self.headers,
-            json={'sha': new_commit_sha}
-        )
-        update_ref_response.raise_for_status()
+        ref_url = f"https://api.github.com/repos/{self.repos[repo_type]['owner']}/{self.repos[repo_type]['name']}/git/refs/heads/{branch}"
+        ref_data = {'sha': new_commit_sha}
+        self._make_request('PATCH', ref_url, json=ref_data)
 
         return new_commit_sha

@@ -165,16 +165,23 @@ tstbtc transcribe $mp3_link --loc "stephan-livera-podcast" --title 'SLP455 Anant
 
 To push the resulting transcript(s) to GitHub:
 
-1. Create a [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with `repo` scope.
+1. Ensure a GitHub App is created and installed on both the main repository and the metadata repository you want to push data to. The app should have the necessary permissions for content manipulation and pull request creation.
 2. Add these to your `.env` file:
    ```
-   GITHUB_TOKEN=your_personal_access_token
+   GITHUB_APP_ID=your_app_id
+   GITHUB_PRIVATE_KEY_BASE64=your_base64_encoded_private_key
+   GITHUB_INSTALLATION_ID=your_installation_id
    GITHUB_REPO_OWNER=target_repo_owner
    GITHUB_REPO_NAME=target_repo_name
    GITHUB_METADATA_REPO_NAME=target_metadata_repo_name
    ```
-   Replace `target_repo_owner`, `target_repo_name`, and `target_metadata_repo_name` with the owner and name of the repository you want to contribute to.
-3. Use the `--github` flag when running the script to automatically fork the target repository (if needed), create a branch in your fork, and submit a pull request to the target repository.
+   Replace the placeholders with your actual GitHub App details and target repository information.
+3. Use the `--github` flag when running the script to automatically create a branch in the target repositories and submit pull requests with the new transcripts and associated metadata.
+
+To convert your GitHub App private key file to base64, use the following command:
+```
+base64 -w 0 path/to/your/private-key.pem
+```
 
 ## Docker Support
 

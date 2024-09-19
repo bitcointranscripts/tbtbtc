@@ -1,4 +1,5 @@
 import os
+import base64
 import configparser
 from dotenv import load_dotenv
 
@@ -57,9 +58,19 @@ class Settings:
         return self._get_env_variable('BEARER_TOKEN')
 
     @property
-    def GITHUB_TOKEN(self):
-        return self._get_env_variable('GITHUB_TOKEN',
-            "To use GitHub API integration, you need to define a 'GITHUB_TOKEN' in your .env file")
+    def GITHUB_APP_ID(self):
+        return self._get_env_variable('GITHUB_APP_ID',
+            "To use GitHub App integration, you need to define a 'GITHUB_APP_ID' in your .env file")
+
+    @property
+    def GITHUB_PRIVATE_KEY(self):
+        return base64.b64decode(self._get_env_variable('GITHUB_PRIVATE_KEY_BASE64',
+            "To use GitHub App integration, you need to define a 'GITHUB_PRIVATE_KEY' in your .env file")).decode('utf-8')
+
+    @property
+    def GITHUB_INSTALLATION_ID(self):
+        return self._get_env_variable('GITHUB_INSTALLATION_ID',
+            "To use GitHub App integration, you need to define a 'GITHUB_INSTALLATION_ID' in your .env file")
 
 # Initialize the Settings class and expose an instance
 settings = Settings()

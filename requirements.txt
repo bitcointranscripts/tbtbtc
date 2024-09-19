@@ -17,3 +17,5 @@ feedparser==6.0.10
 PyYAML==6.0.1
 librosa==0.10.2.post1
 fastapi==0.111.0
+PyJWT==2.9.0
+cryptography==43.0.1

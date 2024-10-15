@@ -2,6 +2,7 @@ import logging
 
 import uvicorn
 import click
+from server import app
 from app.config import settings
 from app.logging import configure_logger, get_logger
 
@@ -20,7 +21,7 @@ def run(mode, host, port):
     if mode == 'dev':
         uvicorn.run("server:app", host=host, port=port, reload=True)
     else:
-        uvicorn.run("server:app", host=host, port=port)
+        uvicorn.run(app, host=host, port=port)
 
 if __name__ == "__main__":
     run()

@@ -29,7 +29,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bitcointranscripts/tstbtc",
-    py_modules=["transcriber","transcriber_server"],
+    py_modules=["transcriber","server","transcriber_server"],
     packages=find_packages(),
     install_requires=[install_requires],
     extras_require=extras_require,

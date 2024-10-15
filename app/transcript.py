@@ -342,7 +342,7 @@ class Video(Source):
             try:
                 self.logger.debug(f"Downloading video: {self.source_file}")
                 ydl_opts = {
-                    "format": "18",
+                    "format": 'worstvideo[ext=mp4]+worstaudio[ext=m4a]/worst[ext=mp4]/worst',
                     "outtmpl": os.path.join(working_dir, "videoFile.%(ext)s"),
                     "nopart": True,
                 }
@@ -350,6 +350,9 @@ class Video(Source):
                     ytdl.download([self.source_file])
 
                 output_file = os.path.join(working_dir, "videoFile.mp4")
+                if not os.path.exists(output_file):
+                    raise Exception(f"Downloaded file not found: {output_file}")
+
                 return os.path.abspath(output_file)
             except Exception as e:
                 self.logger.error(e)

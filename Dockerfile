@@ -1,6 +1,9 @@
 # Use Python 3.10 as the base image
 FROM python:3.10
 
+# Install system dependencies including FFmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
 # Set the working directory
 WORKDIR /app
 

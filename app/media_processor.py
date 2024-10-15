@@ -84,11 +84,11 @@ class MediaProcessor:
             output_path = os.path.abspath(os.path.join(
                 output_path, f"{utils.slugify(filename)}.mp3"))
 
-        logger.info(f"Converting {input_path} to {output_path}")
+        logger.debug(f"Converting {input_path} to {output_path}")
         self.initialize_ffmpeg()
         try:
             ffmpeg.input(input_path).output(output_path, format='mp3').run()
-            logger.info(f"Successfully converted {input_path} to {output_path}")
+            logger.debug(f"Successfully converted {input_path} to {output_path}")
             return output_path
         except ffmpeg.Error as e:
             logger.error(f"Error converting {input_path} to mp3: {e}")

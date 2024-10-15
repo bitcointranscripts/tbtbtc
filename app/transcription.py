@@ -76,7 +76,7 @@ class Transcription:
         self.preprocessing_output = [] if batch_preprocessing_output else None
         self.data_fetcher = DataFetcher(base_url="http://btctranscripts.com")
 
-        self.logger.info(f"Temp directory: {self.tmp_dir}")
+        self.logger.debug(f"Temp directory: {self.tmp_dir}")
 
     def _create_subdirectory(self, subdir_name):
         """Helper method to create subdirectories within the central temp director"""
@@ -87,8 +87,8 @@ class Transcription:
     def __configure_tstbtc_metadata_dir(self):
         metadata_dir = settings.TSTBTC_METADATA_DIR
         if not metadata_dir:
-            alternative_metadata_dir = "/metadata"
-            self.logger.warning(
+            alternative_metadata_dir = "metadata/"
+            self.logger.debug(
                 f"'TSTBTC_METADATA_DIR' environment variable is not defined. Metadata will be stored at '{alternative_metadata_dir}'.")
             return alternative_metadata_dir
         return metadata_dir
@@ -203,7 +203,7 @@ class Transcription:
             cutoff_date = utils.validate_and_parse_date(cutoff_date)
             # Even with a cutoff date, for YouTube playlists we still need to download the metadata
             # for each video in order to obtain the `upload_date` and use it for filtering
-            self.logger.info(
+            self.logger.debug(
                 f"A cutoff date of '{cutoff_date}' is given. Processing sources published after this date.")
         preprocess = False if self.test_mode else preprocess
         transcription_sources = {"added": [], "exist": []}
@@ -280,7 +280,7 @@ class Transcription:
             # Initialize an array with 'sources' as the only element
             sources = [sources]
 
-        self.logger.info(f"Adding transcripts from {json_file}")
+        self.logger.debug(f"Adding transcripts from {json_file}")
         for source in sources:
             metadata = utils.configure_metadata_given_from_JSON(source)
 
@@ -312,7 +312,7 @@ class Transcription:
         if not isinstance(sources, list):
             sources = [sources]
 
-        self.logger.info(f"Removing transcripts from {json_file}")
+        self.logger.debug(f"Removing transcripts from {json_file}")
         removed_sources = []
 
         for source in sources:
@@ -377,7 +377,7 @@ class Transcription:
         This file is the one submitted as part of the Pull Request to the
         bitcointranscripts repo
         """
-        self.logger.info("Creating markdown file with transcription...")
+        self.logger.debug("Creating markdown file with transcription...")
         try:
             if transcript.outputs["raw"] is None:
                 raise Exception("No transcript found")
@@ -419,7 +419,7 @@ class Transcription:
             raise Exception(f"Error writing to file: {e}")
 
     def write_to_json_file(self, transcript: Transcript):
-        self.logger.info("Creating JSON file with transcription...")
+        self.logger.debug("Creating JSON file with transcription...")
         output_dir = f"{self.model_output_dir}/{transcript.source.loc}"
         transcript_json = transcript.to_json()
         transcript_json["transcript_by"] = f"{self.transcript_by} via tstbtc v{__version__}"
@@ -450,7 +450,7 @@ class Transcription:
             raise Exception(f"Error with postprocessing: {e}") from e
 
     def clean_up(self):
-        self.logger.info("Cleaning up...")
+        self.logger.debug("Cleaning up...")
         application.clean_up(self.tmp_dir)
 
     def __del__(self):

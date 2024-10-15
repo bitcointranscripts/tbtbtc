@@ -82,7 +82,7 @@ class Whisper:
         return output_file
 
     def process_with_chapters(self, transcription_service_output, chapters):
-        logger.info("(whisper) Combining transcript with detected chapters...")
+        logger.debug("(whisper) Combining transcript with detected chapters...")
         try:
             chapters_pointer = 0
             transcript_pointer = 0

@@ -27,6 +27,23 @@ class Settings:
         self.PROFILE = os.getenv('PROFILE', 'DEFAULT')
         self.config = read_config(self.PROFILE)
 
+    def get_config_overview(self):
+        overview = "Configuration Settings:\n"
+        overview += f"PROFILE: {self.PROFILE}\n"
+        overview += f"TSTBTC_METADATA_DIR: {self.TSTBTC_METADATA_DIR}\n"
+        overview += f"GITHUB_REPO_OWNER: {self.GITHUB_REPO_OWNER}\n"
+        overview += f"GITHUB_REPO_NAME: {self.GITHUB_REPO_NAME}\n"
+        overview += f"GITHUB_METADATA_REPO_NAME: {self.GITHUB_METADATA_REPO_NAME}\n"
+        overview += f"TRANSCRIPTION_SERVER_URL: {self.TRANSCRIPTION_SERVER_URL}\n"
+        overview += f"BTC_TRANSCRIPTS_URL: {self.BTC_TRANSCRIPTS_URL}\n"
+        
+        # Add config.ini settings
+        overview += "\nSettings from config.ini:\n"
+        for key, value in self.config.items():
+            overview += f"{key}: {value}\n"
+        
+        return overview
+
     @staticmethod
     def _get_env_variable(var_name, custom_message=None):
         value = os.getenv(var_name)

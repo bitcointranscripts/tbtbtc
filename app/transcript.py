@@ -220,7 +220,7 @@ class Audio(Source):
             # sanity checks
             if self.local:
                 raise Exception(f"{self.source_file} is a local file")
-            self.logger.info(f"Downloading audio file: {self.source_file}")
+            self.logger.debug(f"Downloading audio file: {self.source_file}")
             try:
                 audio = requests.get(self.source_file, stream=True)
                 output_file = os.path.join(
@@ -243,11 +243,11 @@ class Audio(Source):
                 raise Exception(f"Error downloading audio file: {e}")
 
         try:
-            self.logger.info(f"Audio processing: '{self.source_file}'")
+            self.logger.debug(f"Audio processing: '{self.source_file}'")
             if not self.local:
                 # download audio file from the internet
                 audio_file_path = download_audio()
-                self.logger.info(f"Audio file stored in: {audio_file_path}")
+                self.logger.debug(f"Audio file stored in: {audio_file_path}")
             else:
                 # calculate the absolute path of the local audio file
                 audio_file_path = os.path.abspath(self.source_file)
@@ -299,7 +299,7 @@ class Video(Source):
         self.youtube_metadata["description"] = value
 
     def download_video_metadata(self):
-        self.logger.info(f"Downloading metadata from: {self.source_file}")
+        self.logger.debug(f"Downloading metadata from: {self.source_file}")
         ydl_opts = {
             'quiet': True,  # Suppress console output
             'extract_flat': True,  # Extract only metadata without downloading
@@ -340,7 +340,7 @@ class Video(Source):
             if self.local:
                 raise Exception(f"{self.source_file} is a local file")
             try:
-                self.logger.info(f"Downloading video: {self.source_file}")
+                self.logger.debug(f"Downloading video: {self.source_file}")
                 ydl_opts = {
                     "format": "18",
                     "outtmpl": os.path.join(working_dir, "videoFile.%(ext)s"),
@@ -356,7 +356,7 @@ class Video(Source):
                 raise Exception(f"Error downloading video: {e}")
 
         try:
-            self.logger.info(f"Video processing: '{self.source_file}'")
+            self.logger.debug(f"Video processing: '{self.source_file}'")
             if not self.local:
                 video_file_path = download_video()
             else:

@@ -1,18 +1,12 @@
-import logging
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import settings
 from app.exceptions import DuplicateSourceError
-from app.logging import configure_logger, get_logger
 from routes.curator import router as curator_router
 from routes.transcription import router as transcription_router
 from routes.media import router as media_router
 
-logger = get_logger()
-configure_logger(logging.DEBUG if settings.config.getboolean('verbose_logging', False) else logging.INFO)
 app = FastAPI()
 
 origins = [

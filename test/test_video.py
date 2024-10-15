@@ -40,7 +40,7 @@ def test_video_with_title():
         title=title,
         date=date,
         tags=tags,
-        category=category,
+        categories=category,
         speakers=speakers,
         local=True,
     )
@@ -54,7 +54,7 @@ def test_video_with_all_options():
     title = "test_video"
     speakers = ["speaker1", "speaker2"]
     tags = ["tag1", "tag2"]
-    category = "category"
+    category = ["category"]
     date = "2020-01-31"
 
     transcription = Transcription(
@@ -72,7 +72,7 @@ def test_video_with_all_options():
         title=title,
         date=date,
         tags=tags,
-        category=category,
+        categories=category,
         speakers=speakers,
         local=True,
     )
@@ -89,7 +89,7 @@ def test_video_with_chapters():
     title = "test_video"
     speakers = ["speaker1", "speaker2"]
     tags = ["tag1", "tag2"]
-    category = "category"
+    category = ["category"]
     date = "2020-01-31"
 
     transcription = Transcription(
@@ -115,7 +115,7 @@ def test_video_with_chapters():
         title=title,
         date=date,
         tags=tags,
-        category=category,
+        categories=category,
         speakers=speakers,
         chapters=chapter_names,
         local=True,

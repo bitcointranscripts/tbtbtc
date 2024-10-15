@@ -377,42 +377,44 @@ class Transcription:
         This file is the one submitted as part of the Pull Request to the
         bitcointranscripts repo
         """
+        class IndentedListDumper(yaml.Dumper):
+            """
+            Custom YAML Dumper that ensures lists are always indented.
+            This is necessary because the default YAML dumper does not indent lists
+            when they are nested inside a mapping/dictionary.
+            """
+            def increase_indent(self, flow=False, indentless=False):
+                return super(IndentedListDumper, self).increase_indent(flow, False)
+
         self.logger.debug("Creating markdown file with transcription...")
         try:
             if transcript.outputs["raw"] is None:
                 raise Exception("No transcript found")
-            # Add metadata prefix
-            meta_data = (
-                "---\n"
-                f'title: "{transcript.title}"\n'
-                f"transcript_by: {self.transcript_by} via tstbtc v{__version__}{self.review_flag}\n"
-            )
-            if not transcript.source.local:
-                meta_data += f"media: {transcript.source.media}\n"
-            meta_data += f"tags: {str(transcript.source.tags)}\n"
-            meta_data += f"speakers: {str(transcript.source.speakers)}\n"
-            meta_data += f"categories: {str(transcript.source.category)}\n"
-            if transcript.summary:
-                meta_data += f'summary: "{transcript.summary}"\n'
-            if transcript.source.episode:
-                meta_data += f"episode: {transcript.source.episode}\n"
-            if transcript.source.date:
-                meta_data += f"date: {transcript.source.date}\n"
+            
+            # Get the metadata from the source
+            metadata = transcript.source.to_json()
 
-            # Serialize additional_resources to YAML and add to meta_data
-            if transcript.source.additional_resources:
-                meta_data += "additional_resources:\n"
-                for resource in transcript.source.additional_resources:
-                    meta_data += yaml.dump([resource], sort_keys=False,
-                                           default_flow_style=False, indent=4)
+            # Add or modify specific fields
+            metadata['transcript_by'] = f"{self.transcript_by} via tstbtc v{__version__}{self.review_flag}"
+            
+            # List of fields to exclude from the markdown metadata
+            excluded_fields = ['type', 'loc', 'chapters', 'description']
 
-            meta_data += "---\n"
+            # Remove excluded fields from the metadata
+            for field in excluded_fields:
+                metadata.pop(field, None)
 
+            # Convert metadata to YAML
+            yaml_metadata = yaml.dump(metadata, Dumper=IndentedListDumper, sort_keys=False)
+            
+            # Prepare the full content
+            full_content = f"---\n{yaml_metadata}---\n\n{transcript.outputs['raw']}\n"
+            
             # Write to file
             markdown_file = f"{utils.configure_output_file_path(output_dir, transcript.title, add_timestamp=False)}.md"
             with open(markdown_file, "w") as opf:
-                opf.write(meta_data)
-                opf.write(transcript.outputs["raw"] + "\n")
+                opf.write(full_content)
+            
             self.logger.info(f"Markdown file stored at: {markdown_file}")
             return os.path.abspath(markdown_file)
         except Exception as e:

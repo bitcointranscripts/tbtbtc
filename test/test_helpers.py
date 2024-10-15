@@ -1,5 +1,5 @@
+import yaml
 from app import application
-
 
 def check_md_file(
     path,
@@ -7,47 +7,67 @@ def check_md_file(
     media,
     title=None,
     date=None,
-    tags=None,
-    category=None,
-    speakers=None,
+    tags=[],
+    categories=[],
+    speakers=[],
     local=False,
     chapters=None,
 ):
-    is_correct = True
+    """
+    Check if the markdown file at the given path contains the expected metadata and content.
+    
+    :param path: Path to the markdown file
+    :param transcript_by: Expected transcriber
+    :param media: Expected media link
+    :param title: Expected title
+    :param date: Expected date
+    :param tags: Expected tags (list)
+    :param category: Expected category (list)
+    :param speakers: Expected speakers (list)
+    :param local: Whether the media is local
+    :param chapters: Expected chapters (list)
+    :return: True if all checks pass, raises AssertionError otherwise
+    """
     if not path:
-        return False
+        raise ValueError("No path provided")
+
     with open(path, "r") as file:
         contents = file.read()
-        file.close()
 
-    data = contents.split("---\n")[1].strip().split("\n")
-    body = contents.split("---\n")[2].strip()
-    fields = {}
+    # Split the content into metadata and body
+    parts = contents.split("---\n")
+    if len(parts) < 3:
+        raise ValueError("Invalid markdown format: missing YAML front matter")
 
-    for x in data:
-        key = x.split(": ")[0]
-        value = x.split(": ")[1]
-        fields[key] = value
+    yaml_content = parts[1].strip()
+    body = parts[2].strip()
 
-    detected_chapters = []
+    # Parse YAML content
+    fields = yaml.safe_load(yaml_content)
 
-    for x in body.split("\n"):
-        if x.startswith("##"):
-            detected_chapters.append(x[3:].strip())
-
-    assert fields["transcript_by"] == f"{transcript_by} via tstbtc v{application.__version__}"
+    # Check fields
+    assert fields["transcript_by"] == f"{transcript_by} via tstbtc v{application.__version__}", "Incorrect transcript_by field"
 
     if not local:
-        assert fields["media"] == media
-    assert fields["title"] == f'"{title}"'
+        assert fields.get("media") == media
+
+    assert fields.get("title") == title
 
     if date:
-        assert fields["date"] == date
+        assert fields.get("date") == date
+    
     if tags:
-        assert fields["tags"] == str(tags)
+        assert set(fields.get("tags", [])) == set(tags)
+    
     if speakers:
-        assert fields["speakers"] == str(speakers)
-    if category:
-        assert fields["categories"] == str(category)
+        assert set(fields.get("speakers", [])) == set(speakers)
+    
+    if categories:
+        assert set(fields.get("categories", [])) == set(categories)
+
+    # Check chapters
     if chapters:
+        detected_chapters = [x[3:].strip() for x in body.split("\n") if x.startswith("##")]
         assert detected_chapters == chapters
+
+    return True

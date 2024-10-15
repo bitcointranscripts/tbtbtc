@@ -46,7 +46,7 @@ def test_audio_with_all_data():
     title = "title"
     speakers = ["speaker1", "speaker2"]
     tags = ["tag1", "tag2"]
-    category = "category"
+    category = ["category"]
     date = "2020-01-31"
     transcription = Transcription(
         test_mode=True,
@@ -63,7 +63,7 @@ def test_audio_with_all_data():
         title=title,
         date=date,
         tags=tags,
-        category=category,
+        categories=category,
         speakers=speakers,
         local=True,
     )

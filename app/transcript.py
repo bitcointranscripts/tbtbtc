@@ -175,17 +175,18 @@ class Source:
 
     def to_json(self):
         json_data = {
+            'title': self.title,
+            'speakers': self.speakers,
+            'tags': self.tags,
             'type': self.type,
             'loc': self.loc,
             "source_file": self.source_file,
             "media": self.media,
-            'title': self.title,
             'categories': self.category,
-            'tags': self.tags,
-            'speakers': self.speakers,
-            'description': self.description,
             'chapters': self.chapters,
         }
+        if self.description:
+            json_data['description'] = self.description
         if self.date:
             json_data['date'] = self.date.isoformat()
         if self.summary:
@@ -292,10 +293,12 @@ class Video(Source):
 
     @property
     def description(self):
-        return self.youtube_metadata.get("description", None)
+        return self.youtube_metadata.get("description", None) if self.youtube_metadata else None
 
     @description.setter
     def description(self, value):
+        if self.youtube_metadata is None:
+            self.youtube_metadata = {}
         self.youtube_metadata["description"] = value
 
     def download_video_metadata(self):

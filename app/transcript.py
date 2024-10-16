@@ -115,6 +115,7 @@ class Source:
         self.category = category
         self.speakers = speakers
         self.preprocess = preprocess
+        self.additional_resources: list[dict[str, str]] = []
 
     @property
     def output_path_with_title(self):

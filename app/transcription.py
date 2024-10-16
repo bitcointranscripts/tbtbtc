@@ -185,7 +185,7 @@ class Transcription:
         date=None,
         summary=None,
         episode=None,
-        additional_resources=None,
+        additional_resources=[],
         # cutoff_date serves as a threshold, and only content published beyond this point is relevant
         cutoff_date=None,
         tags=[],
